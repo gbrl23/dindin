@@ -309,8 +309,6 @@ export default function AddTransactionView() {
                 type: type,
                 group_id: selectedGroupId || null,
                 goal_id: (type === 'investment' && selectedGoalId) ? selectedGoalId : null,
-                group_id: selectedGroupId || null,
-                goal_id: (type === 'investment' && selectedGoalId) ? selectedGoalId : null,
                 series_id: seriesId, // Preserve existing
                 competence_date: competenceDate
             };

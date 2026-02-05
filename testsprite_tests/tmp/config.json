@@ -1,0 +1,19 @@
+{
+  "status": "init",
+  "type": "frontend",
+  "scope": "codebase",
+  "localEndpoint": "http://localhost:3000/",
+  "loginUser": "teste@teste.com",
+  "loginPassword": "teste123",
+  "executionArgs": {
+    "projectName": "expense-tracker",
+    "projectPath": "/Users/gabriellopes/Documents/Kakua/Projetos/Kakua/expense-tracker",
+    "testIds": [],
+    "additionalInstruction": "",
+    "envs": {
+      "API_KEY": "sk-user-Z-oWDii_9PLqSsAKjUkNBOeCgzYr3M8w7eqKrJGrdjMFKYf4x2xs-k7r6CnJaBL6jU8MqC5SZGjhphUoW3QrVGH8mDw-7sGwxvyPU1b0A59r8ihg9M4rW5flInCPGQCVhmc"
+    }
+  },
+  "serverPort": 55043,
+  "proxy": "http://2c8464fb-8f4f-4a97-aaa0-54ff755bbfac:xgyVdkVtLtkSRpwNIDPAhIGb7ThxRUsl@tun.testsprite.com:8080"
+}

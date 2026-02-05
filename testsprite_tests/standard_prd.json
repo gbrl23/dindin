@@ -1,0 +1,122 @@
+{
+  "meta": {
+    "project": "Dindin - Shared Card Expense MVP",
+    "date": "2026-02-03",
+    "prepared_by": "Product Manager (Auto-generated)"
+  },
+  "product_overview": "MVP for Dindin: a lightweight mobile/web financial tool that calculates real monthly balances for users who share credit-card expenses (e.g., couples), replacing spreadsheets by automatically computing per-profile totals, shared splits, and the transfer amount needed at month close.",
+  "core_goals": [
+    "Validate that shared-card expense calculation solves a recurring pain and is valued enough to replace spreadsheets.",
+    "Provide an intuitive flow for creating accounts and multiple profiles, entering expenses and incomes, and getting an immediate, trustworthy month-closing summary.",
+    "Deliver an accurate, auditable split-and-settlement engine that shows who owes whom and the exact transfer amount.",
+    "Achieve retention across at least 2 monthly cycles for early users and drive invitations/peer onboarding."
+  ],
+  "key_features": [
+    "Authentication (src/features/auth): Email/password signup & login; simple onboarding wizard to create primary and secondary profiles.",
+    "Profiles (src/features/profiles): Create/manage multiple profiles per account (e.g., partner, spouse); set profile metadata (name, avatar).",
+    "Transactions (src/features/transactions): Manual entry of expenses with fields: amount, date, optional category, payer (profile), split configuration (preset 50/50, custom ratios), notes; edit/delete transactions.",
+    "Incomes/Entries (src/features/transactions or src/features/bills): Record salary and extra income tied to a profile.",
+    "Split & Settlement Engine (core logic in src/features/transactions + src/features/groups): Automatic calculation of per-profile totals, shared totals, net balances, and pairwise settlement suggestions (who pays whom and how much).",
+    "Monthly Closing View (src/features/dashboard): Compact month summary showing total spent per profile, total shared, individual balances, and a clear visual indicator of debt direction (who owes whom).",
+    "Categories (src/features/categories): Optional category tagging to help annotation; categories are optional per MVP but available for better data entry.",
+    "Groups (src/features/groups): Simple group management for shared contexts (household, trip); map transactions to groups for separation of concerns.",
+    "Cards & Bills (src/features/cards, src/features/bills) — limited/local management only: Allow manual card/invoice records and bill statuses without bank integrations (integration is out-of-scope).",
+    "Account Settings (src/features/account): Basic profile and app settings; switch active month; export simple CSV of month close summary for audit or to share.",
+    "UI/UX: Lightweight, clarity-focused UI built with React + Tailwind to emphasize the 'aha' moment — immediate visibility of split calculations on transaction creation."
+  ],
+  "user_flow_summary": [
+    "Onboarding & Auth: User signs up (email/password) and completes a short onboarding that prompts creation of the primary profile and at least one secondary profile (page 1 outlines signup and objective).",
+    "Create Profiles: User adds secondary profiles (spouse/partner) using Profiles screen; profiles can be edited later (page 3, \"Cadastro de usuários\").",
+    "Add Transactions: User creates transactions with amount, date, optional category, payer, and split selection (preset or custom). The transaction entry shows the immediate impact on each profile's balance.",
+    "Add Incomes: User records salary/extra income tied to a profile to ensure accurate monthly net balance.",
+    "Automatic Calculation: After each entry the Split & Settlement Engine recomputes totals and settlement amounts; dashboard and transaction list update in realtime (PRD pages 3 & 4 describe automatic calculations and the main flow).",
+    "View Monthly Close: User navigates to Monthly Closing View (dashboard) to see final per-profile balances, total shared amount, and a visual arrow/indicator of who owes whom. The system also shows a suggested transfer amount to settle balances (page 3 and 4).",
+    "Adjust & Reconcile: User can edit or delete transactions to correct errors and immediately see recalculated settlement; option to export CSV for external reconciliation.",
+    "Invite/Share (validation step only): User may invite the other person to the app for shared visibility; success metric includes whether users invite peers (page 4 & 5 metrics)."
+  ],
+  "validation_criteria": [
+    "Functional correctness: For a representative set of transactions (including mixed individual and shared spends, custom splits like 70/30), calculated per-profile totals and suggested settlement amounts must match expected results within tolerance (unit tests + integration tests).",
+    "Onboarding completion: >70% of new users complete onboarding and add at least one profile.",
+    "Active usage: Early cohort (5–10 users) uses the app for >=2 monthly cycles; defined as adding transactions across two separate calendar months and visiting monthly close screen.",
+    "Retention & conversion signals: At least 30% of active users invite the other person into the app or explicitly report abandoning their spreadsheet (qualitative interviews).",
+    "Usability: Time-to-enter-a-transaction under 60 seconds in usability tests and users report that the app is easier than their spreadsheet in qualitative interviews (see PRD page 5 metrics and decision criteria).",
+    "Performance: Dashboard and recalculation latency under 500ms for typical user datasets (<500 transactions/month).",
+    "Security & Data: Authentication implemented via Supabase; user data persisted to DB with role-based access for profiles. Basic data validation and server-side checks prevent malformed transactions.",
+    "Out-of-scope compliance: No bank/card integrations or automated invoice imports included in MVP; any card/bill features must be manual and explicitly labeled as such.",
+    "Acceptance sign: After initial MVP release, team will 'Follow' (invest further) if early users use the product for more than 1 month, report time savings, and say they would not return to spreadsheets (PRD pages 4–5)."
+  ],
+  "code_summary": {
+    "tech_stack": [
+      "Javascript",
+      "React",
+      "Vite",
+      "Supabase",
+      "TailwindCSS"
+    ],
+    "features": [
+      {
+        "name": "Auth",
+        "description": "Authentication management including login and registration",
+        "files": [
+          "src/features/auth"
+        ]
+      },
+      {
+        "name": "Dashboard",
+        "description": "Main dashboard view for financial overview",
+        "files": [
+          "src/features/dashboard"
+        ]
+      },
+      {
+        "name": "Transactions",
+        "description": "Transaction management (expenses, incomes)",
+        "files": [
+          "src/features/transactions"
+        ]
+      },
+      {
+        "name": "Cards",
+        "description": "Credit card management and invoices",
+        "files": [
+          "src/features/cards"
+        ]
+      },
+      {
+        "name": "Bills",
+        "description": "Bill tracking and payment status",
+        "files": [
+          "src/features/bills"
+        ]
+      },
+      {
+        "name": "Groups",
+        "description": "Group expense sharing management",
+        "files": [
+          "src/features/groups"
+        ]
+      },
+      {
+        "name": "Profiles",
+        "description": "User profiles and settings",
+        "files": [
+          "src/features/profiles"
+        ]
+      },
+      {
+        "name": "Categories",
+        "description": "Expense categories management",
+        "files": [
+          "src/features/categories"
+        ]
+      },
+      {
+        "name": "Account",
+        "description": "Account settings and configuration",
+        "files": [
+          "src/features/account"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,601 @@
+[
+  {
+    "id": "TC001",
+    "title": "Email/password signup success and onboarding completion",
+    "description": "Verify a new user can sign up with email and password, complete onboarding by creating a primary profile and at least one secondary profile, and land on the dashboard.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to signup page"
+      },
+      {
+        "type": "action",
+        "description": "Enter valid email and password and submit signup form"
+      },
+      {
+        "type": "assertion",
+        "description": "Account is created and user receives confirmation UI (no magic-link flow expected)"
+      },
+      {
+        "type": "action",
+        "description": "Complete onboarding: create primary profile with name, select a preset avatar, then add a secondary profile"
+      },
+      {
+        "type": "assertion",
+        "description": "Onboarding completes and dashboard is displayed with both profiles present"
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "Login failure with incorrect password",
+    "description": "Verify that login fails with incorrect password and shows a clear error without exposing sensitive info.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to login page"
+      },
+      {
+        "type": "action",
+        "description": "Enter existing account email and an incorrect password and submit"
+      },
+      {
+        "type": "assertion",
+        "description": "Login is rejected and an appropriate error message is shown; user remains unauthenticated"
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "Create and edit profiles (multiple profiles per account)",
+    "description": "Verify user can add multiple profiles, edit profile metadata (name and preset avatar), and changes reflect everywhere.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Log in and navigate to Profiles screen"
+      },
+      {
+        "type": "action",
+        "description": "Add two additional profiles with names and select preset avatars"
+      },
+      {
+        "type": "assertion",
+        "description": "New profiles appear in the profiles list and are selectable in transaction forms"
+      },
+      {
+        "type": "action",
+        "description": "Edit one profile's name and change its preset avatar"
+      },
+      {
+        "type": "assertion",
+        "description": "Edited profile changes are saved and reflected on the dashboard and transaction entry dropdowns"
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "Prevent deletion of lone primary profile",
+    "description": "Ensure system prevents deleting the primary profile when it's the only profile in account and surfaces an explanatory error.",
+    "category": "error handling",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Create or use an account with a single profile"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to delete the primary profile"
+      },
+      {
+        "type": "assertion",
+        "description": "System blocks deletion and displays a clear message explaining at least one profile is required"
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "Create expense with 50/50 split updates balances immediately",
+    "description": "Verify creating an expense with a 50/50 split and a payer updates per-profile totals, shared totals, and net balances on dashboard in real time.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Log in with two-profile account and note current dashboard balances"
+      },
+      {
+        "type": "action",
+        "description": "Create a transaction: expense amount 100.00, date today, payer Profile A, preset split 50/50, optional category omitted"
+      },
+      {
+        "type": "assertion",
+        "description": "Transaction appears in transaction list and dashboard updates immediately"
+      },
+      {
+        "type": "assertion",
+        "description": "Per-profile totals show Profile A spent 100.00, shared portion allocated 50.00 each, net balances updated accordingly (Profile B owes 50.00)"
+      }
+    ]
+  },
+  {
+    "id": "TC006",
+    "title": "Create expense with custom split (70/30) calculation correctness",
+    "description": "Verify custom split ratios are applied correctly and settlement suggestions reflect custom shares.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Log in with two-profile account"
+      },
+      {
+        "type": "action",
+        "description": "Create a transaction: expense amount 200.00, payer Profile A, custom split Profile A 70% / Profile B 30%"
+      },
+      {
+        "type": "assertion",
+        "description": "Dashboard shows shared totals: Profile A share 140.00, Profile B share 60.00; net balance indicates Profile B owes 60.00 to Profile A (or equivalent transfer suggestion)"
+      }
+    ]
+  },
+  {
+    "id": "TC007",
+    "title": "Reject invalid custom split ratios (sum != 100)",
+    "description": "Ensure the system validates custom split inputs and rejects ratios that do not sum to 100% with a helpful error.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Log in and open create-transaction form"
+      },
+      {
+        "type": "action",
+        "description": "Enter expense amount 100.00 and set custom split Profile A 60% / Profile B 60% (sum 120%)"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to save transaction"
+      },
+      {
+        "type": "assertion",
+        "description": "Server or client-side validation blocks save and displays an error explaining splits must total 100%"
+      }
+    ]
+  },
+  {
+    "id": "TC008",
+    "title": "Create income tied to profile affects net balance",
+    "description": "Verify adding an income entry tied to a profile increases that profile's net balance and reduces amounts owed correctly.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Log in to two-profile account with an outstanding owed amount (Profile B owes Profile A 50)"
+      },
+      {
+        "type": "action",
+        "description": "Create an income entry: Profile B income 100.00, date today"
+      },
+      {
+        "type": "assertion",
+        "description": "Dashboard recalculates and Profile B's net balance increases by 100.00; outstanding owed amount is reduced accordingly"
+      }
+    ]
+  },
+  {
+    "id": "TC009",
+    "title": "Edit transaction amount and split triggers immediate recalculation",
+    "description": "Verify editing an existing transaction updates all derived totals and settlement suggestions in realtime.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Create an expense: 120.00, payer Profile A, split 50/50"
+      },
+      {
+        "type": "action",
+        "description": "Edit the transaction: change amount to 150.00 and change split to custom 60/40"
+      },
+      {
+        "type": "assertion",
+        "description": "Transaction is updated; dashboard shows new per-profile shares (Profile A 90.00, Profile B 60.00) and net balances updated"
+      }
+    ]
+  },
+  {
+    "id": "TC010",
+    "title": "Delete transaction updates settlement and totals",
+    "description": "Verify deleting a transaction removes its impact from totals and settlement suggestions immediately.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Create two transactions that produce a non-zero settlement"
+      },
+      {
+        "type": "action",
+        "description": "Delete one transaction"
+      },
+      {
+        "type": "assertion",
+        "description": "Deleted transaction disappears from list and dashboard recalculates; pairwise settlement suggestions change correspondingly"
+      }
+    ]
+  },
+  {
+    "id": "TC011",
+    "title": "Pairwise settlement algorithm correctness for three profiles",
+    "description": "Validate the settlement engine computes minimal pairwise transfers for three profiles with mixed balances to settle all debts.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Create profiles A, B, C"
+      },
+      {
+        "type": "action",
+        "description": "Add transactions so final net balances are: A: +40, B: -30, C: -10 (positive means others owe A)"
+      },
+      {
+        "type": "assertion",
+        "description": "Settlement suggestions show B pays A 30.00 and C pays A 10.00 (or equivalent minimal set) and sum of transfers equals total owed"
+      },
+      {
+        "type": "assertion",
+        "description": "No extraneous transfers are suggested and pairwise amounts result in all net balances becoming zero"
+      }
+    ]
+  },
+  {
+    "id": "TC012",
+    "title": "Rounding and fractional-cent handling preserves totals",
+    "description": "Test transactions that lead to fractional cents when split (e.g., 0.01 increments) and ensure rounding strategy preserves total sum and consistent settlement.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Create an expense amount 0.05 with split among 3 profiles custom (33.33/33.33/33.34) or equivalent that requires rounding"
+      },
+      {
+        "type": "assertion",
+        "description": "Displayed per-profile shares sum to the total expense; settlement engine uses consistent rounding and suggested transfers reconcile to zero difference"
+      }
+    ]
+  },
+  {
+    "id": "TC013",
+    "title": "Switch active month excludes other months from monthly close",
+    "description": "Verify changing the active month filters transactions and the monthly close summary reflects only transactions in the selected calendar month.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Create transactions on two different months (last month and current month) for same profiles"
+      },
+      {
+        "type": "action",
+        "description": "Use account settings or dashboard to switch active month to previous month"
+      },
+      {
+        "type": "assertion",
+        "description": "Monthly close view and totals show only transactions from previous month; current month transactions are excluded"
+      }
+    ]
+  },
+  {
+    "id": "TC014",
+    "title": "Group scoping: transactions mapped to group do not appear in other group summaries",
+    "description": "Ensure transactions assigned to a group are scoped to that group's monthly view and do not affect other groups or the global summary unless intended.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Create two groups (Household, Trip) and add transactions to each group for the same profiles"
+      },
+      {
+        "type": "action",
+        "description": "Open Household group's monthly close view"
+      },
+      {
+        "type": "assertion",
+        "description": "Household view shows only Household transactions and settlement computed only from those"
+      },
+      {
+        "type": "action",
+        "description": "Open Trip group's monthly close view"
+      },
+      {
+        "type": "assertion",
+        "description": "Trip view shows only Trip transactions and does not include Household transactions"
+      }
+    ]
+  },
+  {
+    "id": "TC015",
+    "title": "Category tagging optional and non-blocking",
+    "description": "Verify adding a transaction without a category succeeds and that adding a category tag displays it in the transaction list and dashboard filters.",
+    "category": "functional",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Create an expense without selecting a category"
+      },
+      {
+        "type": "assertion",
+        "description": "Transaction is accepted and visible in the list with blank/none category"
+      },
+      {
+        "type": "action",
+        "description": "Create another transaction and select a category 'Groceries'"
+      },
+      {
+        "type": "assertion",
+        "description": "Transaction shows category 'Groceries' and category is available as a filter option"
+      }
+    ]
+  },
+  {
+    "id": "TC016",
+    "title": "Manual card/bill record creation and status update (no bank integrations)",
+    "description": "Verify manual card or bill records can be created, edited, and status toggled without affecting transaction totals unless a transaction is explicitly linked.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to Cards/Bills screen and create a new bill record with amount, due date, card label, and unpaid status"
+      },
+      {
+        "type": "assertion",
+        "description": "Bill is saved and displayed with correct fields and unpaid status"
+      },
+      {
+        "type": "action",
+        "description": "Change bill status to paid and edit a metadata field (e.g., note)"
+      },
+      {
+        "type": "assertion",
+        "description": "Bill status and metadata updates persist; dashboard totals do not change unless a transaction is created/linked to the bill"
+      }
+    ]
+  },
+  {
+    "id": "TC017",
+    "title": "Server-side validation rejects malformed transaction amounts",
+    "description": "Ensure server rejects transactions with invalid amounts (non-numeric, NaN, negative when not allowed) and returns appropriate error codes/messages.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Attempt to create a transaction with amount 'abc' (non-numeric) via UI or API"
+      },
+      {
+        "type": "assertion",
+        "description": "Request is rejected and validation error displayed; no transaction is created"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to create a transaction with amount -50.00 where negative amounts are disallowed"
+      },
+      {
+        "type": "assertion",
+        "description": "Request is rejected with validation error and no transaction created"
+      }
+    ]
+  },
+  {
+    "id": "TC018",
+    "title": "Access control: user cannot access another account's data",
+    "description": "Verify that a user from a different account cannot read or modify profiles, transactions, groups, or dashboard of another account.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Create Account A with profiles and some transactions; create Account B with a separate login"
+      },
+      {
+        "type": "action",
+        "description": "While logged in as Account B, attempt to access Account A's transaction IDs or profile endpoints (via UI deep link or API)"
+      },
+      {
+        "type": "assertion",
+        "description": "Access is denied (403/404) and Account B cannot view or modify Account A data"
+      }
+    ]
+  },
+  {
+    "id": "TC019",
+    "title": "Performance: dashboard recalculation under 500ms for ~400 transactions",
+    "description": "Measure dashboard update latency after creating a transaction in an account with ~400 transactions; must be <500ms for typical dataset.",
+    "category": "performance",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Seed an account with 400 realistic transactions across the active month"
+      },
+      {
+        "type": "action",
+        "description": "Note current dashboard state time, create a new transaction, and measure time until dashboard shows updated totals"
+      },
+      {
+        "type": "assertion",
+        "description": "Measured dashboard update latency is <= 500 milliseconds"
+      }
+    ]
+  },
+  {
+    "id": "TC020",
+    "title": "Concurrency: simultaneous edits result in consistent final state",
+    "description": "Simulate two clients concurrently modifying the same transaction (one edits amount, other deletes) and ensure final data remains consistent and no duplication occurs. Server should enforce consistency (optimistic locking or last-write policy) and surface conflicts if present.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Create a transaction amount 100.00"
+      },
+      {
+        "type": "action",
+        "description": "Client A fetches transaction and submits edit to change amount to 120.00 at the same time Client B submits delete for same transaction"
+      },
+      {
+        "type": "assertion",
+        "description": "System enforces a consistent outcome: either transaction is deleted and no edit persists, or edit is applied and delete returns a not-found/failed response; dashboard reflects single consistent state without duplicate or partial records"
+      }
+    ]
+  },
+  {
+    "id": "TC021",
+    "title": "Date boundary/timezone handling assigns transaction to correct month",
+    "description": "Ensure transactions created with dates near month boundaries (including timezone differences) are assigned to the correct active month based on the app's documented date policy (local date).",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Set device or request timezone to a zone such that transaction local date differs from UTC (e.g., UTC+14)"
+      },
+      {
+        "type": "action",
+        "description": "Create a transaction with a timestamp that in UTC is previous/next month but in local time is inside the target month"
+      },
+      {
+        "type": "assertion",
+        "description": "Monthly close view for the local month includes the transaction consistent with the app's local-date mapping; switching to UTC-based month (if feature exists) changes inclusion accordingly"
+      }
+    ]
+  },
+  {
+    "id": "TC022",
+    "title": "Net balances algebraic correctness with multiple incomes and expenses",
+    "description": "Given a set of incomes and expenses for multiple profiles, verify the algebraic sum of per-profile totals and shared totals matches expected net balances and settlement suggestions.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Create the following entries for two profiles: Profile A income 1000, expense 300 split 50/50; Profile B income 800, expense 200 personal (100% paid by B)"
+      },
+      {
+        "type": "assertion",
+        "description": "Compute expected per-profile net balances manually and compare to dashboard: ensure sums (incomes - personal spends - owed shares) match and settlement suggestion equals algebraic result"
+      }
+    ]
+  },
+  {
+    "id": "TC023",
+    "title": "Suggested transfer equals owed amount in two-profile simple case",
+    "description": "In a simple two-profile scenario where one profile owes an exact amount, verify the system suggests the exact single transfer required.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Create Profile A expense 75 paid by A with split 50/50"
+      },
+      {
+        "type": "action",
+        "description": "Create no other transactions"
+      },
+      {
+        "type": "assertion",
+        "description": "Dashboard indicates Profile B owes Profile A 37.50 and suggested transfer is Profile B -> Profile A: 37.50"
+      }
+    ]
+  },
+  {
+    "id": "TC024",
+    "title": "UI: immediate recalculation on transaction create without page reload",
+    "description": "Verify the UI updates balances and settlement indicators immediately after transaction creation without requiring a full page reload.",
+    "category": "ui",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open dashboard and note current balances"
+      },
+      {
+        "type": "action",
+        "description": "Create a transaction using the in-place transaction form"
+      },
+      {
+        "type": "assertion",
+        "description": "Dashboard totals and settlement arrows update in the current view automatically (no manual refresh) within expected latency"
+      }
+    ]
+  },
+  {
+    "id": "TC025",
+    "title": "Handle very large amounts without overflow and with correct arithmetic",
+    "description": "Verify system accepts very large transaction amounts (e.g., 1,000,000.00) and computes splits and settlements correctly without numeric overflow or precision loss.",
+    "category": "functional",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Create an expense amount 1,000,000.00 with payer Profile A and 50/50 split"
+      },
+      {
+        "type": "assertion",
+        "description": "Per-profile shares are 500,000.00 each, dashboard displays values correctly, and settlement suggestion is correct"
+      }
+    ]
+  },
+  {
+    "id": "TC026",
+    "title": "Reject transaction with zero amount when not allowed",
+    "description": "Ensure transactions with zero amount are validated according to business rules (either allowed for adjustments or rejected) and appropriate feedback is given; for this MVP assume zero-amount expense is invalid.",
+    "category": "error handling",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Attempt to create an expense with amount 0.00"
+      },
+      {
+        "type": "assertion",
+        "description": "Validation prevents creation and displays message explaining amount must be greater than zero"
+      }
+    ]
+  },
+  {
+    "id": "TC027",
+    "title": "Profile removal updates settlements and prevents orphan data",
+    "description": "When removing a non-primary profile from an account, ensure transactions remain auditable: either prevent delete if transactions exist or offer a clear migration/merge path; test that the system prevents orphaned data.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Create profiles A and B and add transactions where B is payer in some entries"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to delete Profile B"
+      },
+      {
+        "type": "assertion",
+        "description": "System either prevents deletion with message that profile has transactions and must be reassigned/archived, or offers a guided migration; no orphan transactions are left without a valid profile"
+      }
+    ]
+  }
+]

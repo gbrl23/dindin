@@ -1,0 +1,74 @@
+{
+    "tech_stack": [
+        "Javascript",
+        "React",
+        "Vite",
+        "Supabase",
+        "TailwindCSS"
+    ],
+    "features": [
+        {
+            "name": "Auth",
+            "description": "Authentication management including login and registration",
+            "files": [
+                "src/features/auth"
+            ]
+        },
+        {
+            "name": "Dashboard",
+            "description": "Main dashboard view for financial overview",
+            "files": [
+                "src/features/dashboard"
+            ]
+        },
+        {
+            "name": "Transactions",
+            "description": "Transaction management (expenses, incomes)",
+            "files": [
+                "src/features/transactions"
+            ]
+        },
+        {
+            "name": "Cards",
+            "description": "Credit card management and invoices",
+            "files": [
+                "src/features/cards"
+            ]
+        },
+        {
+            "name": "Bills",
+            "description": "Bill tracking and payment status",
+            "files": [
+                "src/features/bills"
+            ]
+        },
+        {
+            "name": "Groups",
+            "description": "Group expense sharing management",
+            "files": [
+                "src/features/groups"
+            ]
+        },
+        {
+            "name": "Profiles",
+            "description": "User profiles and settings",
+            "files": [
+                "src/features/profiles"
+            ]
+        },
+        {
+            "name": "Categories",
+            "description": "Expense categories management",
+            "files": [
+                "src/features/categories"
+            ]
+        },
+        {
+            "name": "Account",
+            "description": "Account settings and configuration",
+            "files": [
+                "src/features/account"
+            ]
+        }
+    ]
+}

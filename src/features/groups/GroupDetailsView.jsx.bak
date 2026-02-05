@@ -1,0 +1,381 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useGroups } from '../../hooks/useGroups';
+import { supabase } from '../../services/supabase';
+import { useAuth } from '../../contexts/AuthContext';
+import { ArrowLeft, Plus, Users, DollarSign, Send, Settings, UserPlus, FileText, Trash2, Save, X, Calendar } from 'lucide-react';
+
+export default function GroupDetailsView() {
+    const { id: groupId } = useParams();
+    const navigate = useNavigate();
+    const { user } = useAuth();
+
+    // Hooks
+    const { groups, getGroupMembers, getGroupBalances, inviteUser, updateGroup, deleteGroup, loading: groupsLoading } = useGroups();
+
+    // Local State
+    const [balances, setBalances] = useState([]);
+    const [members, setMembers] = useState([]);
+    const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+    const [inviteEmail, setInviteEmail] = useState('');
+    const [isLoadingBalances, setIsLoadingBalances] = useState(false);
+    const [groupMonth, setGroupMonth] = useState(new Date()); // Independent month navigation
+    const [groupTransactions, setGroupTransactions] = useState([]);
+    const [loadingTransactions, setLoadingTransactions] = useState(true);
+
+    // Edit Modal State
+    const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+    const [editData, setEditData] = useState({ name: '', description: '', icon: '', color: '' });
+
+    // Derived Data
+    const group = useMemo(() => groups.find(g => g.id === groupId), [groups, groupId]);
+
+    const isAdmin = group?.my_role === 'owner' || group?.my_role === 'admin';
+    const isOwner = group?.my_role === 'owner';
+
+    // Fetch group transactions with date range filter
+    const fetchGroupTransactions = async () => {
+        setLoadingTransactions(true);
+        try {
+            // Calculate date range for selected month
+            const year = groupMonth.getFullYear();
+            const month = groupMonth.getMonth();
+            const startDate = new Date(year, month, 1);
+            const endDate = new Date(year, month + 1, 1);
+
+            const startStr = startDate.toISOString().split('T')[0];
+            const endStr = endDate.toISOString().split('T')[0];
+
+            const { data, error } = await supabase
+                .from('transactions')
+                .select(`
+                    id, description, amount, date, payer_id, card_id, type,
+                    payer:profiles!payer_id(full_name),
+                    transaction_shares(
+                        profile_id,
+                        share_amount,
+                        status
+                    )
+                `)
+                .eq('group_id', groupId)
+                .eq('type', 'expense')
+                .gte('date', startStr)
+                .lt('date', endStr)
+                .order('date', { ascending: false });
+
+            if (error) throw error;
+
+            // Calculate people_count and shares_total on the front-end
+            const normalized = (data || []).map(t => ({
+                ...t,
+                people_count: t.transaction_shares?.length ?? 0,
+                shares_total: (t.transaction_shares ?? []).reduce((sum, sh) => sum + Number(sh.share_amount), 0)
+            }));
+
+            setGroupTransactions(normalized);
+        } catch (error) {
+            console.error('Error fetching group transactions:', error);
+            setGroupTransactions([]);
+        } finally {
+            setLoadingTransactions(false);
+        }
+    };
+
+    // Fetch Data on Mount and when month changes
+    useEffect(() => {
+        if (groupId) {
+            setIsLoadingBalances(true);
+
+            // Load Balances
+            getGroupBalances(groupId)
+                .then(data => setBalances(data))
+                .catch(err => console.error("Failed to load balances", err))
+                .finally(() => setIsLoadingBalances(false));
+
+            // Load Members
+            getGroupMembers(groupId)
+                .then(data => setMembers(data))
+                .catch(err => console.error("Failed to load members", err));
+
+            // Load Transactions for selected month
+            fetchGroupTransactions();
+        }
+    }, [groupId, groupMonth]);
+
+    // Initialize Edit Data when group loads or modal opens
+    useEffect(() => {
+        if (group && isSettingsModalOpen) {
+            setEditData({
+                name: group.name,
+                description: group.description || '',
+                icon: group.icon || '👥',
+                color: group.color || '#3B82F6'
+            });
+        }
+    }, [group, isSettingsModalOpen]);
+
+    // Month Navigation Handlers
+    const handleInvite = async (e) => {
+        e.preventDefault();
+        try {
+            await inviteUser(groupId, inviteEmail);
+            alert('Convite enviado com sucesso!');
+            setInviteEmail('');
+            setIsInviteModalOpen(false);
+        } catch (error) {
+            alert(`Erro ao enviar convite: ${error.message}`);
+        }
+    };
+
+    // 3. Handle Update
+    const handleUpdate = async (e) => {
+        e.preventDefault();
+        try {
+            await updateGroup(groupId, editData);
+            setIsSettingsModalOpen(false);
+        } catch (error) {
+            alert(`Erro ao atualizar: ${error.message}`);
+        }
+    };
+
+    // 4. Handle Delete
+    const handleDelete = async () => {
+        if (!window.confirm('Tem certeza que deseja excluir este grupo? Todas as despesas e histórico serão apagados permanentemente para todos os membros.')) return;
+
+        try {
+            await deleteGroup(groupId);
+            navigate('/groups');
+        } catch (error) {
+            alert(`Erro ao excluir: ${error.message}`);
+        }
+    };
+
+    if (groupsLoading && !group) return <div className="p-4 text-center">Carregando grupo...</div>;
+    if (!group && !groupsLoading) return <div className="p-4 text-center">Grupo não encontrado.</div>;
+
+    return (
+        <div className="container" style={{ paddingBottom: '100px' }}>
+            {/* HEADER */}
+            <header style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
+                <button onClick={() => navigate('/groups')} style={{ background: 'transparent', color: 'var(--text-primary)' }}>
+                    <ArrowLeft size={24} />
+                </button>
+                <div style={{ flex: 1 }}>
+                    <h1 className="text-gradient" style={{ fontSize: '1.5rem', fontWeight: '800' }}>{group?.name}</h1>
+                    <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{group?.description || 'Sem descrição'}</p>
+                </div>
+
+                {/* Invite Button */}
+                <button
+                    onClick={() => setIsInviteModalOpen(true)}
+                    style={{ background: 'rgba(59, 130, 246, 0.1)', color: 'var(--primary)', padding: '10px', borderRadius: '12px' }}
+                >
+                    <UserPlus size={20} />
+                </button>
+
+                {/* Settings Button (Admin only) */}
+                {isAdmin && (
+                    <button
+                        onClick={() => setIsSettingsModalOpen(true)}
+                        style={{ background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-primary)', padding: '10px', borderRadius: '12px' }}
+                    >
+                        <Settings size={20} />
+                    </button>
+                )}
+            </header>
+
+            {/* BALANCES SECTION */}
+            <div className="card" style={{ padding: '20px', marginBottom: '24px', background: 'linear-gradient(135deg, var(--bg-card) 0%, rgba(59, 130, 246, 0.05) 100%)' }}>
+                <h3 style={{ fontSize: '1rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <DollarSign size={16} /> Balanços
+                </h3>
+
+                {isLoadingBalances ? (
+                    <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Calculando...</div>
+                ) : balances.length === 0 ? (
+                    <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Tudo quitado! Ninguém deve nada.</div>
+                ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {balances.map(b => (
+                            <div key={b.profile_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.9rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem' }}>
+                                        {b.full_name?.charAt(0)}
+                                    </div>
+                                    <span style={{ fontWeight: b.profile_id === user?.profile_id ? '700' : '400' }}>
+                                        {b.full_name} {b.profile_id === user?.profile_id ? '(Você)' : ''}
+                                    </span>
+                                </div>
+                                <div style={{ fontWeight: '700', color: b.balance > 0 ? 'var(--success)' : (b.balance < 0 ? 'var(--danger)' : 'var(--text-secondary)') }}>
+                                    {b.balance > 0 ? `Recebe R$ ${Number(b.balance).toFixed(2)}` : (b.balance < 0 ? `Deve R$ ${Math.abs(Number(b.balance)).toFixed(2)}` : '-')}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* MEMBERS SECTION */}
+            <div className="card" style={{ padding: '20px', marginBottom: '24px' }}>
+                <h3 style={{ fontSize: '1rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Users size={16} /> Membros ({members.length})
+                </h3>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                    {members.map(m => (
+                        <div key={m.user_id} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-secondary)', padding: '6px 12px', borderRadius: '20px', fontSize: '0.9rem' }}>
+                            <img
+                                src={m.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.full_name)}&background=random`}
+                                alt={m.full_name}
+                                style={{ width: '24px', height: '24px', borderRadius: '50%' }}
+                            />
+                            <span>{m.full_name}</span>
+                            {m.role === 'owner' && <span style={{ fontSize: '0.7rem', background: 'var(--primary)', color: 'white', padding: '1px 6px', borderRadius: '4px' }}>Dono</span>}
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* EXPENSES LIST */}
+            <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <h3 style={{ fontSize: '1.1rem' }}>Despesas</h3>
+                    <button
+                        onClick={() => navigate(`/add-transaction?groupId=${groupId}`)}
+                        style={{ fontSize: '0.9rem', color: 'var(--primary)', fontWeight: '600', background: 'transparent' }}
+                    >
+                        + Adicionar
+                    </button>
+                </div>
+
+                {groupTransactions.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-secondary)' }}>
+                        Nenhuma despesa neste grupo ainda.
+                    </div>
+                ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {groupTransactions.map(t => (
+                            <div key={t.id} className="card" style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                    <div style={{
+                                        width: '40px', height: '40px', borderRadius: '12px',
+                                        background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                    }}>
+                                        <FileText size={20} />
+                                    </div>
+                                    <div>
+                                        <div style={{ fontWeight: '600' }}>{t.description}</div>
+                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                            Pago por {t.payer?.full_name || 'Alguém'} • {new Date(t.date).toLocaleDateString()}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style={{ fontWeight: '700' }}>
+                                    R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* INVITE MODAL */}
+            {isInviteModalOpen && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', backdropFilter: 'blur(4px)' }}>
+                    <div className="card" style={{ width: '100%', maxWidth: '340px', background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+                        <h3 style={{ fontSize: '1.2rem', marginBottom: '16px' }}>Convidar Membro</h3>
+                        <form onSubmit={handleInvite} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            <input
+                                type="email"
+                                className="input"
+                                placeholder="Email do usuário"
+                                value={inviteEmail}
+                                onChange={e => setInviteEmail(e.target.value)}
+                                autoFocus
+                                required
+                            />
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button type="button" onClick={() => setIsInviteModalOpen(false)} className="btn" style={{ flex: 1, background: 'var(--bg-secondary)' }}>Cancelar</button>
+                                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Enviar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* SETTINGS MODAL */}
+            {isSettingsModalOpen && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', backdropFilter: 'blur(4px)' }}>
+                    <div className="card" style={{ width: '100%', maxWidth: '400px', background: 'var(--bg-card)', border: '1px solid var(--border)', maxHeight: '90vh', overflowY: 'auto' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                            <h3 style={{ fontSize: '1.2rem' }}>Configurações do Grupo</h3>
+                            <button onClick={() => setIsSettingsModalOpen(false)} style={{ background: 'transparent', color: 'var(--text-secondary)' }}><X size={24} /></button>
+                        </div>
+
+                        <form onSubmit={handleUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            <div>
+                                <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '8px', display: 'block' }}>Ícone</label>
+                                <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px' }}>
+                                    {['🏠', '✈️', '🎉', '🍕', '🍻', '🛍️', '🎁'].map(icon => (
+                                        <button
+                                            key={icon}
+                                            type="button"
+                                            onClick={() => setEditData({ ...editData, icon })}
+                                            style={{
+                                                fontSize: '1.5rem', padding: '8px', borderRadius: '8px', border: '1px solid',
+                                                borderColor: editData.icon === icon ? 'var(--primary)' : 'transparent',
+                                                background: editData.icon === icon ? 'rgba(59, 130, 246, 0.1)' : 'var(--bg-secondary)'
+                                            }}
+                                        >
+                                            {icon}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Nome do Grupo</label>
+                                <input
+                                    className="input"
+                                    value={editData.name}
+                                    onChange={e => setEditData({ ...editData, name: e.target.value })}
+                                    required
+                                />
+                            </div>
+
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Descrição</label>
+                                <textarea
+                                    className="input"
+                                    value={editData.description}
+                                    onChange={e => setEditData({ ...editData, description: e.target.value })}
+                                    rows={2}
+                                />
+                            </div>
+
+                            <button type="submit" className="btn btn-primary" style={{ marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                <Save size={18} /> Salvar Alterações
+                            </button>
+                        </form>
+
+                        {isOwner && (
+                            <div style={{ marginTop: '32px', borderTop: '1px solid var(--border)', paddingTop: '24px' }}>
+                                <h4 style={{ fontSize: '0.9rem', color: 'var(--danger)', marginBottom: '8px' }}>Zona de Perigo</h4>
+                                <button
+                                    onClick={handleDelete}
+                                    className="btn"
+                                    style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                >
+                                    <Trash2 size={18} /> Excluir Grupo
+                                </button>
+                                <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '8px', textAlign: 'center' }}>
+                                    Esta ação não pode ser desfeita.
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}

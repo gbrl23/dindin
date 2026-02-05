@@ -1,0 +1,560 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { useTransactions } from '../../hooks/useTransactions';
+import { useCards } from '../../hooks/useCards';
+// import { useGroups } from '../../hooks/useGroups'; // Removed Member Filter
+import { useCategories } from '../../hooks/useCategories';
+import { useProfiles } from '../../hooks/useProfiles';
+import { useAuth } from '../../contexts/AuthContext';
+import { useDashboard } from '../../contexts/DashboardContext';
+import {
+    Search, Filter, Download,
+    ArrowUp, ArrowDown, TrendingUp, FileText,
+    CreditCard, User, Calendar, Edit2, Trash2, Check, X, Tag
+} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { parseLocalDate, displayDate } from '../../utils/dateUtils';
+
+export default function TransactionsView() {
+    const navigate = useNavigate();
+    const { user } = useAuth();
+    const { selectedDate } = useDashboard();
+
+    // Data Hooks
+    // Data Hooks
+    const { transactions, fetchTransactions, removeTransaction } = useTransactions();
+    const { cards } = useCards();
+    const { categories } = useCategories();
+    const { profiles } = useProfiles();
+    // const { groups, getGroupMembers } = useGroups(); // Removed Member Filter
+    // const { groups, getGroupMembers } = useGroups(); // Removed Member Filter 
+
+    // UI State
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedType, setSelectedType] = useState('all'); // all, expense, income, investment, bill
+    const [selectedCard, setSelectedCard] = useState('all');
+    // const [selectedMember, setSelectedMember] = useState('all'); // Removed
+    const [selectedCategory, setSelectedCategory] = useState('all');
+
+    // Flattened Member List (Unique) - Removed
+    // const [allMembers, setAllMembers] = useState([]);
+
+    useEffect(() => {
+        fetchTransactions();
+    }, [fetchTransactions]);
+
+    // Member loading effect removed
+
+
+    // --- FILTER LOGIC ---
+    const selectedMonth = selectedDate.getMonth();
+    const selectedYear = selectedDate.getFullYear();
+
+    const filteredTransactions = useMemo(() => {
+        return transactions.filter(t => {
+            // 1. Month Filter
+            const d = parseLocalDate(t.invoice_date || t.date);
+            if (d.getMonth() !== selectedMonth || d.getFullYear() !== selectedYear) return false;
+
+            // 2. Type Filter
+            if (selectedType !== 'all') {
+                if (t.type !== selectedType) return false;
+            }
+
+            // 3. Card Filter
+            if (selectedCard !== 'all') {
+                if (t.card_id !== selectedCard) return false;
+            }
+
+            // 4. Category Filter (Replaces Member)
+            if (selectedCategory !== 'all') {
+                if (t.category_id !== selectedCategory) return false;
+            }
+
+            // 5. Search
+            if (searchTerm) {
+                const searchLower = searchTerm.toLowerCase();
+                const matchDesc = t.description.toLowerCase().includes(searchLower);
+                const matchVal = t.amount.toString().includes(searchLower);
+                if (!matchDesc && !matchVal) return false;
+            }
+
+            return true;
+        });
+    }, [transactions, selectedMonth, selectedYear, selectedType, selectedCard, selectedCategory, searchTerm]);
+
+    // --- SUMMARY STATS (FILTERED) ---
+    const stats = useMemo(() => {
+        const income = filteredTransactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
+        const expense = filteredTransactions.filter(t => t.type !== 'income').reduce((acc, t) => acc + t.amount, 0); // Include invest/bill as expense for diff? Usually yes.
+        return {
+            income,
+            expense,
+            balance: income - expense,
+            count: filteredTransactions.length
+        };
+    }, [filteredTransactions]);
+
+
+    // CSV Export
+    const handleExport = () => {
+        const headers = ["Data", "Descrição", "Tipo", "Valor", "Cartão", "Quem Pagou"];
+        const rows = filteredTransactions.map(t => [
+            t.date,
+            t.description,
+            t.type,
+            t.amount,
+            t.card?.name || '-',
+            t.payer_id || '-' // Need to map ID to name ideally
+        ]);
+        const csvContent = "data:text/csv;charset=utf-8,"
+            + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `transacoes_${selectedMonth + 1}_${selectedYear}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    // --- SELECTION STATE ---
+    const [selectedIds, setSelectedIds] = useState([]);
+
+    const toggleSelection = (id) => {
+        if (selectedIds.includes(id)) {
+            setSelectedIds(selectedIds.filter(sid => sid !== id));
+        } else {
+            setSelectedIds([...selectedIds, id]);
+        }
+    };
+
+    const handleSelectAll = (e) => {
+        if (e.target.checked) {
+            setSelectedIds(filteredTransactions.map(t => t.id));
+        } else {
+            setSelectedIds([]);
+        }
+    };
+
+    const handleBulkDelete = async () => {
+        const selectedTransactions = filteredTransactions.filter(t => selectedIds.includes(t.id));
+        const totalAmount = selectedTransactions.reduce((sum, t) => sum + t.amount, 0);
+
+        const confirmMessage = `Excluir ${selectedIds.length} transação(ões)?\n\n` +
+            `💰 Total: R$ ${totalAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\n` +
+            `Esta ação não pode ser desfeita.`;
+
+        if (window.confirm(confirmMessage)) {
+            try {
+                await Promise.all(selectedIds.map(id => removeTransaction(id)));
+                setSelectedIds([]);
+                await fetchTransactions();
+            } catch (err) {
+                alert('Erro ao excluir: ' + err.message);
+            }
+        }
+    }
+
+    const handleDeleteSingle = async (t) => {
+        if (window.confirm(`Excluir "${t.description}"?`)) {
+            try {
+                await removeTransaction(t.id);
+                await fetchTransactions();
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+    };
+
+    return (
+        <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px', marginTop: '24px' }}>
+
+
+            {/* Header (Title + Global Actions) is in TopHeader component, we are in the Workspace area */}
+            <h1 style={{ fontSize: '1.8rem', fontWeight: '800', letterSpacing: '-1px', marginBottom: '8px' }}>Histórico</h1>
+
+            {/* 1. Control Bar: Search + Tabs */}
+            <div className="card" style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+                {/* Search & Tabs Row used to be separate, let's merge or stack pleasantly */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '8px' }}>
+
+                    {/* Search */}
+                    <div style={{ position: 'relative', flex: 1, maxWidth: '400px' }}>
+                        <Search size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
+                        <input
+                            type="text"
+                            placeholder="Buscar lançamentos..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            style={{
+                                width: '100%',
+                                padding: '12px 12px 12px 42px',
+                                borderRadius: '12px',
+                                border: '1px solid var(--border)',
+                                background: 'var(--bg-secondary)',
+                                fontSize: '0.9rem',
+                                outline: 'none',
+                                transition: 'all 0.2s'
+                            }}
+                            onFocus={e => e.target.style.background = 'var(--bg-card)'}
+                            onBlur={e => e.target.style.background = 'var(--bg-secondary)'}
+                        />
+                    </div>
+
+                    {/* Tabs (Pills) */}
+                    <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '0px' }}>
+                        {[
+                            { id: 'all', label: 'Todos' },
+                            { id: 'income', label: 'Receitas' },
+                            { id: 'expense', label: 'Despesas' },
+                            { id: 'investment', label: 'Investimentos' },
+                            { id: 'bill', label: 'Contas' }
+                        ].map(tab => {
+                            const isActive = selectedType === tab.id;
+                            return (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setSelectedType(tab.id)}
+                                    style={{
+                                        padding: '10px 18px',
+                                        borderRadius: '24px',
+                                        border: isActive ? '1px solid var(--primary)' : '1px solid transparent',
+                                        background: isActive ? 'var(--bg-primary)' : 'transparent',
+                                        color: isActive ? 'var(--primary)' : 'var(--text-secondary)',
+                                        fontWeight: '600',
+                                        fontSize: '0.9rem',
+                                        cursor: 'pointer',
+                                        whiteSpace: 'nowrap',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    {tab.label}
+                                </button>
+                            )
+                        })}
+                    </div>
+                </div>
+
+                {/* 2. Filters Row */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '0 8px 8px 8px', flexWrap: 'wrap' }}>
+
+                    {/* Card Filter */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-secondary)', borderRadius: '12px', padding: '8px 12px', border: '1px solid var(--border)' }}>
+                        <CreditCard size={16} color="var(--text-secondary)" />
+                        <select
+                            value={selectedCard}
+                            onChange={e => setSelectedCard(e.target.value)}
+                            style={{ background: 'transparent', border: 'none', fontSize: '0.9rem', outline: 'none', color: 'var(--text-primary)', minWidth: '140px' }}
+                        >
+                            <option value="all">Todos os cartões</option>
+                            {cards.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
+                    </div>
+
+                    {/* Category Filter (Replaces Member) */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-secondary)', borderRadius: '12px', padding: '8px 12px', border: '1px solid var(--border)' }}>
+                        <Tag size={16} color="var(--text-secondary)" />
+                        <select
+                            value={selectedCategory}
+                            onChange={e => setSelectedCategory(e.target.value)}
+                            style={{ background: 'transparent', border: 'none', fontSize: '0.9rem', outline: 'none', color: 'var(--text-primary)', minWidth: '140px' }}
+                        >
+                            <option value="all">Todas as categorias</option>
+                            {categories.map(cat => (
+                                <option key={cat.id} value={cat.id}>
+                                    {cat.icon} {cat.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div style={{ flex: 1 }}></div>
+
+                    {/* Export */}
+                    <button
+                        onClick={handleExport}
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'transparent', border: 'none', color: 'var(--text-primary)', fontWeight: '600', fontSize: '0.9rem', cursor: 'pointer' }}
+                    >
+                        <Download size={18} />
+                        Exportar CSV
+                    </button>
+
+                </div>
+            </div>
+
+            {/* Category Total Indicator */}
+            {selectedCategory !== 'all' && (
+                <div className="animate-fade-in" style={{ margin: '0 8px', padding: '12px 16px', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--primary)', maxWidth: '400px' }}>
+                    <span style={{ fontSize: '0.9rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Tag size={18} />
+                        Total em {categories.find(c => c.id === selectedCategory)?.name || 'Categoria'}
+                    </span>
+                    <span style={{ fontSize: '1.2rem', fontWeight: '800' }}>
+                        R$ {filteredTransactions.reduce((acc, t) => acc + (t.type === 'expense' ? t.amount : 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                </div>
+            )}
+
+
+            {/* 3. Summary Cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
+                <div className="card" style={{ padding: '20px' }}>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>Total Receitas</div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: '700', color: 'var(--success)' }}>
+                        R$ {stats.income.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </div>
+                </div>
+                <div className="card" style={{ padding: '20px' }}>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>Total Despesas</div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: '700', color: 'var(--text-primary)' }}>
+                        R$ {stats.expense.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </div>
+                </div>
+                <div className="card" style={{ padding: '20px' }}>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>Diferença</div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: '700', color: stats.balance >= 0 ? 'var(--success)' : 'var(--danger)' }}>
+                        R$ {stats.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </div>
+                </div>
+                <div className="card" style={{ padding: '20px' }}>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>Quantidade</div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: '700', color: 'var(--text-primary)' }}>
+                        {stats.count}
+                    </div>
+                </div>
+            </div>
+
+            {/* 4. List / Grid */}
+            <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
+                {/* Contextual Action Bar OR Normal Header */}
+                {selectedIds.length > 0 ? (
+                    <div style={{
+                        padding: '16px 24px',
+                        borderBottom: '1px solid var(--border)',
+                        background: 'var(--primary)',
+                        color: '#fff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        animation: 'fadeIn 0.2s ease-out'
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                            <button
+                                onClick={() => setSelectedIds([])}
+                                style={{
+                                    background: 'rgba(255,255,255,0.2)',
+                                    border: 'none',
+                                    borderRadius: '50%',
+                                    width: 32, height: 32,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    cursor: 'pointer',
+                                    color: '#fff'
+                                }}
+                                title="Limpar seleção"
+                            >
+                                <X size={18} />
+                            </button>
+                            <div>
+                                <span style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>
+                                    {selectedIds.length} selecionado{selectedIds.length > 1 ? 's' : ''}
+                                </span>
+                                <span style={{ marginLeft: '12px', opacity: 0.8, fontSize: '0.9rem' }}>
+                                    (Total: R$ {
+                                        filteredTransactions
+                                            .filter(t => selectedIds.includes(t.id))
+                                            .reduce((sum, t) => sum + t.amount, 0)
+                                            .toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+                                    })
+                                </span>
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <button
+                                onClick={handleBulkDelete}
+                                style={{
+                                    background: 'var(--bg-card)',
+                                    color: 'var(--danger)',
+                                    border: 'none',
+                                    padding: '10px 20px',
+                                    borderRadius: '8px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    display: 'flex', alignItems: 'center', gap: '8px',
+                                    fontSize: '0.9rem'
+                                }}
+                            >
+                                <Trash2 size={18} />
+                                Excluir Seleção
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <div style={{ padding: '24px', borderBottom: '1px solid var(--border)' }}>
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: '700' }}>Lançamentos de {selectedDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</h3>
+                    </div>
+                )}
+
+                {filteredTransactions.length === 0 ? (
+                    <div style={{ padding: '64px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                        <p>Nenhuma transação encontrada com os filtros atuais.</p>
+                    </div>
+                ) : (
+                    <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.95rem' }}>
+                            <thead style={{ background: 'var(--bg-secondary)', color: 'var(--text-secondary)', fontSize: '0.85rem', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
+                                <tr>
+                                    {/* Checkbox Header */}
+                                    <th style={{ padding: '16px 24px', width: '40px' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedIds.length === filteredTransactions.length && filteredTransactions.length > 0}
+                                            onChange={handleSelectAll}
+                                            style={{ width: 16, height: 16, cursor: 'pointer', accentColor: 'var(--primary)' }}
+                                        />
+                                    </th>
+                                    <th style={{ padding: '16px', width: '60px' }}>#</th>
+                                    <th style={{ padding: '16px', width: 'auto' }}>Descrição</th>
+                                    <th style={{ padding: '16px', width: '110px' }}>Data</th>
+                                    <th style={{ padding: '16px', width: '160px' }}>Categoria</th>
+                                    <th style={{ padding: '16px', width: '120px' }}>Origem</th>
+                                    <th style={{ padding: '16px', width: '140px' }}>Dividido com</th>
+                                    <th style={{ padding: '16px', width: '140px', textAlign: 'left' }}>Valor</th>
+                                    <th style={{ padding: '16px', width: '100px', textAlign: 'left' }}>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredTransactions.map((t, index) => {
+                                    const isSelected = selectedIds.includes(t.id);
+                                    return (
+                                        <tr key={t.id}
+                                            onClick={() => toggleSelection(t.id)}
+                                            style={{
+                                                borderBottom: '1px solid var(--border-light)',
+                                                cursor: 'pointer',
+                                                transition: 'background 0.2s',
+                                                background: isSelected ? 'var(--bg-secondary)' : 'transparent'
+                                            }}
+                                            className="hover:bg-gray-50"
+                                        >
+                                            <td style={{ padding: '16px 24px' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isSelected}
+                                                    onChange={() => { }} // Handle by Row Click
+                                                    style={{ width: 16, height: 16, cursor: 'pointer', accentColor: 'var(--primary)' }}
+                                                />
+                                            </td>
+                                            <td style={{ padding: '16px' }}>
+                                                <div style={{
+                                                    width: 36, height: 36,
+                                                    borderRadius: '10px',
+                                                    background: t.type === 'income' ? 'rgba(52, 199, 89, 0.1)' : 'rgba(29, 29, 31, 0.05)',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    color: t.type === 'income' ? 'var(--success)' : 'var(--text-primary)'
+                                                }}>
+                                                    {t.type === 'income' ? <ArrowUp size={18} /> :
+                                                        t.type === 'investment' ? <TrendingUp size={18} color="var(--info)" /> :
+                                                            t.type === 'bill' ? <FileText size={18} color="var(--warning)" /> :
+                                                                <ArrowDown size={18} />}
+                                                </div>
+                                            </td>
+                                            <td style={{ padding: '16px', fontWeight: '600' }}>{t.description}</td>
+                                            <td style={{ padding: '16px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                                {displayDate(t.date)}
+                                            </td>
+                                            <td style={{ padding: '16px' }}>
+                                                {t.category_details ? (
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <div style={{
+                                                            width: 24, height: 24, borderRadius: '8px',
+                                                            background: `${t.category_details.color}20`, color: t.category_details.color,
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem'
+                                                        }}>
+                                                            {t.category_details.icon}
+                                                        </div>
+                                                        <span style={{ fontWeight: '500', color: 'var(--text-primary)' }}>{t.category_details.name}</span>
+                                                    </div>
+                                                ) : (
+                                                    <span style={{
+                                                        padding: '4px 10px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: '500',
+                                                        background: 'var(--bg-primary)', color: 'var(--text-secondary)', textTransform: 'capitalize'
+                                                    }}>
+                                                        {t.type === 'bill' ? 'Conta' : t.type === 'expense' ? 'Despesa' : t.type === 'income' ? 'Receita' : 'Investimento'}
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td style={{ padding: '16px', color: 'var(--text-secondary)' }}>
+                                                {t.card?.name || (t.type === 'expense' ? 'Dinheiro' : '-')}
+                                            </td>
+                                            <td style={{ padding: '16px' }}>
+                                                {(() => {
+                                                    if (!t.shares || t.shares.length <= 1) return <span style={{ color: 'var(--text-tertiary)' }}>-</span>;
+
+                                                    // Filter out current user from display if desired, or show all. 
+                                                    // Usually "Split with" implies others.
+                                                    const others = t.shares.filter(s => s.profile_id !== user?.id);
+
+                                                    if (others.length === 0) return <span style={{ color: 'var(--text-tertiary)' }}>-</span>;
+
+                                                    return (
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                            {others.slice(0, 3).map(share => {
+                                                                const p = profiles.find(pr => pr.id === share.profile_id);
+                                                                return (
+                                                                    <div key={share.id} title={p?.full_name || 'Usuário'} style={{
+                                                                        width: 24, height: 24, borderRadius: '50%',
+                                                                        background: 'var(--primary)', color: '#fff',
+                                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                                        fontSize: '0.7rem', fontWeight: 'bold', border: '1px solid #fff'
+                                                                    }}>
+                                                                        {p?.avatar_url ? (
+                                                                            <img src={p.avatar_url} alt={p.full_name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                                                                        ) : (
+                                                                            (p?.full_name?.[0] || '?').toUpperCase()
+                                                                        )}
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                            {others.length > 3 && (
+                                                                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginLeft: '4px' }}>+{others.length - 3}</span>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })()}
+                                            </td>
+
+                                            <td style={{ padding: '16px', textAlign: 'left', fontWeight: '600', color: t.type === 'income' ? 'var(--success)' : 'var(--text-primary)' }}>
+                                                {t.type === 'income' ? '+' : '-'} R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                            </td>
+                                            <td style={{ padding: '16px', textAlign: 'left', color: 'var(--text-tertiary)' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '8px' }}>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); navigate(`/edit-transaction/${t.id}`); }}
+                                                        style={{ padding: '8px', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-primary)' }}
+                                                        className="hover:bg-gray-200 rounded-md"
+                                                    >
+                                                        <Edit2 size={16} />
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); handleDeleteSingle(t); }}
+                                                        style={{ padding: '8px', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--danger)' }}
+                                                        className="hover:bg-gray-200 rounded-md"
+                                                        title="Excluir"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+        </div >
+    );
+}

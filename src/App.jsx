@@ -16,6 +16,7 @@ import InvestmentsView from './features/transactions/InvestmentsView';
 import GroupsView from './features/groups/GroupsView';
 import GroupDetailsView from './features/groups/GroupDetailsView';
 import AccountView from './features/account/AccountView';
+import CalendarView from './features/calendar/CalendarView';
 import LandingPage from './pages/LandingPage';
 
 import MainLayout from './components/layout/MainLayout';
@@ -46,6 +47,7 @@ function App() {
             <Route path="/card-invoice/:cardId" element={<ProtectedRoute><MainLayout><CardInvoiceView /></MainLayout></ProtectedRoute>} />
             <Route path="/transactions" element={<ProtectedRoute><MainLayout><TransactionsView /></MainLayout></ProtectedRoute>} />
             <Route path="/investments" element={<ProtectedRoute><MainLayout><InvestmentsView /></MainLayout></ProtectedRoute>} />
+            <Route path="/calendar" element={<ProtectedRoute><MainLayout><CalendarView /></MainLayout></ProtectedRoute>} />
             <Route path="/edit-transaction/:id" element={<ProtectedRoute><MainLayout><AddTransactionView /></MainLayout></ProtectedRoute>} />
             <Route path="/account" element={<ProtectedRoute><MainLayout><AccountView /></MainLayout></ProtectedRoute>} />
 

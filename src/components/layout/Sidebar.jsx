@@ -11,7 +11,8 @@ import {
     ChevronLeft,
     ChevronRight,
     X,
-    User
+    User,
+    Calendar
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -31,15 +32,53 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
     const navItems = [
         { path: '/dashboard', icon: <LayoutDashboard size={20} />, label: 'Visão Geral' },
         { path: '/transactions', icon: <PieChart size={20} />, label: 'Transações' },
+        { path: '/calendar', icon: <Calendar size={20} />, label: 'Calendário' },
         { path: '/cards', icon: <CreditCard size={20} />, label: 'Cartões' },
         { path: '/bills', icon: <FileText size={20} />, label: 'Contas' },
         { path: '/investments', icon: <TrendingUp size={20} />, label: 'Investimentos' },
         { path: '/groups', icon: <Users size={20} />, label: 'Grupos' },
+    ];
+
+    const bottomNavItems = [
         { path: '/account', icon: <User size={20} />, label: 'Minha Conta' },
     ];
 
     // Check if we're on mobile
     const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+
+    const renderIndices = (items) => items.map((item) => {
+        const isActive = location.pathname === item.path;
+        return (
+            <NavLink
+                key={item.path}
+                to={item.path}
+                style={{ textDecoration: 'none' }}
+                title={isCollapsed && !isMobile ? item.label : ''}
+            >
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: (isCollapsed && !isMobile) ? '12px 0' : '12px 16px',
+                    borderRadius: '14px',
+                    color: isActive ? '#FFFFFF' : 'var(--text-secondary)',
+                    background: isActive ? 'var(--primary)' : 'transparent',
+                    boxShadow: isActive ? '0 4px 12px rgba(81, 0, 255, 0.25)' : 'none',
+                    transition: 'all 0.2s ease',
+                    justifyContent: (isCollapsed && !isMobile) ? 'center' : 'flex-start',
+                    height: '48px',
+                    position: 'relative'
+                }}>
+                    {item.icon}
+                    {(!isCollapsed || isMobile) && (
+                        <span style={{ fontWeight: isActive ? '600' : '500', fontSize: '0.95rem' }}>
+                            {item.label}
+                        </span>
+                    )}
+                </div>
+            </NavLink>
+        );
+    });
 
     return (
         <>
@@ -156,41 +195,22 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
                     </div>
                 </div>
 
-                {/* Navigation */}
-                <nav style={{ flex: 1, padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {navItems.map((item) => {
-                        const isActive = location.pathname === item.path;
-                        return (
-                            <NavLink
-                                key={item.path}
-                                to={item.path}
-                                style={{ textDecoration: 'none' }}
-                                title={isCollapsed && !isMobile ? item.label : ''}
-                            >
-                                <div style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '12px',
-                                    padding: (isCollapsed && !isMobile) ? '12px 0' : '12px 16px',
-                                    borderRadius: '14px',
-                                    color: isActive ? '#FFFFFF' : 'var(--text-secondary)',
-                                    background: isActive ? 'var(--primary)' : 'transparent',
-                                    boxShadow: isActive ? '0 4px 12px rgba(81, 0, 255, 0.25)' : 'none',
-                                    transition: 'all 0.2s ease',
-                                    justifyContent: (isCollapsed && !isMobile) ? 'center' : 'flex-start',
-                                    height: '48px',
-                                    position: 'relative'
-                                }}>
-                                    {item.icon}
-                                    {(!isCollapsed || isMobile) && (
-                                        <span style={{ fontWeight: isActive ? '600' : '500', fontSize: '0.95rem' }}>
-                                            {item.label}
-                                        </span>
-                                    )}
-                                </div>
-                            </NavLink>
-                        );
-                    })}
+                {/* Main Navigation */}
+                <nav style={{ flex: 1, padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto' }}>
+                    {renderIndices(navItems)}
+
+                    {/* Spacer to push bottom items down */}
+                    <div style={{ flex: 1 }}></div>
+
+                    {/* Divider */}
+                    <div style={{
+                        height: '1px',
+                        background: 'var(--border)',
+                        margin: '8px 4px'
+                    }}></div>
+
+                    {/* Bottom Navigation */}
+                    {renderIndices(bottomNavItems)}
                 </nav>
             </aside>
         </>

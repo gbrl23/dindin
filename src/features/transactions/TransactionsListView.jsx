@@ -151,11 +151,6 @@ export default function TransactionsListView() {
     }, []);
 
     const handleDelete = async (transaction) => {
-        if (transaction.series_id) {
-            setDeleteModal({ show: true, id: transaction.id, seriesId: transaction.series_id });
-            return;
-        }
-
         // If this transaction is part of a series, show the modal
         if (transaction.series_id) {
             setDeleteModal({ show: true, id: transaction.id, seriesId: transaction.series_id, isBulk: false });
@@ -428,7 +423,7 @@ export default function TransactionsListView() {
                             const trailingActions = () => (
                                 <TrailingActions>
                                     <SwipeAction
-                                        destructive={true}
+                                        destructive={!t.series_id}
                                         onClick={() => handleDelete(t)}
                                     >
                                         <div style={{

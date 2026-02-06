@@ -271,6 +271,18 @@ export default function AddTransactionView() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!amount || !description) return;
+
+        // Ensure payer_id is set
+        if (!payerId && user && profiles.length > 0) {
+            const myProfile = profiles.find(p => p.user_id === user.id);
+            if (myProfile) {
+                setPayerId(myProfile.id);
+            } else {
+                alert('Erro: Perfil de usuário não encontrado. Recarregue a página.');
+                return;
+            }
+        }
+
         if (type === 'expense' && !card) {
             alert('É necessário selecionar um cartão de crédito.');
             return;

@@ -24,6 +24,7 @@ import {
     Type as ListType
 } from 'react-swipeable-list';
 import 'react-swipeable-list/dist/styles.css';
+import SeriesActionModal from '../../components/SeriesActionModal';
 
 // --- COMPONENTS ---
 
@@ -115,7 +116,7 @@ export default function TransactionsView() {
     const { selectedDate } = useDashboard();
 
     // Data Hooks
-    const { transactions, fetchTransactions, removeTransaction } = useTransactions();
+    const { transactions, fetchTransactions, removeTransaction, removeTransactionSeries } = useTransactions();
     const { cards } = useCards();
     const { categories } = useCategories();
     const { profiles } = useProfiles();
@@ -146,6 +147,39 @@ export default function TransactionsView() {
             longPressTimer.current = null;
         }
     }, []);
+
+    // Delete Modal State
+    const [deleteModal, setDeleteModal] = useState({ show: false, id: null, seriesId: null, isBulk: false });
+
+    // Handle Confirm Delete Series
+    const handleConfirmDeleteSeries = async (scope) => {
+        if (!deleteModal.id && !deleteModal.seriesId) return;
+
+        try {
+            if (scope === 'single') {
+                if (deleteModal.isBulk) {
+                    // Not implemented for bulk yet on this view simply
+                    // But if it was triggered for single item with series
+                    await removeTransaction(deleteModal.id);
+                } else {
+                    await removeTransaction(deleteModal.id);
+                }
+            } else {
+                // scope is 'future' or 'all'
+                // We need removeTransactionSeries from hook
+                if (removeTransactionSeries) {
+                    await removeTransactionSeries(deleteModal.id, deleteModal.seriesId, scope);
+                } else {
+                    alert('Função de remover série não disponível');
+                }
+            }
+            await fetchTransactions();
+            setDeleteModal({ show: false, id: null, seriesId: null, isBulk: false });
+        } catch (error) {
+            console.error(error);
+            alert('Erro ao excluir: ' + error.message);
+        }
+    };
 
     useEffect(() => {
         fetchTransactions();
@@ -271,6 +305,12 @@ export default function TransactionsView() {
     }
 
     const handleDeleteSingle = async (t) => {
+        // Check for series
+        if (t.series_id) {
+            setDeleteModal({ show: true, id: t.id, seriesId: t.series_id, isBulk: false });
+            return;
+        }
+
         if (window.confirm(`Excluir "${t.description}"?`)) {
             try {
                 await removeTransaction(t.id);
@@ -904,6 +944,14 @@ export default function TransactionsView() {
                     </div>
                 )}
             </div>
+            {/* Series Action Modal */}
+            <SeriesActionModal
+                isOpen={deleteModal.show}
+                onClose={() => setDeleteModal({ ...deleteModal, show: false })}
+                onConfirm={handleConfirmDeleteSeries}
+                action="delete"
+                isBulk={deleteModal.isBulk}
+            />
         </div >
     );
 }

@@ -35,6 +35,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
         { path: '/bills', icon: <FileText size={20} />, label: 'Contas' },
         { path: '/investments', icon: <TrendingUp size={20} />, label: 'Investimentos' },
         { path: '/groups', icon: <Users size={20} />, label: 'Grupos' },
+        { path: '/account', icon: <User size={20} />, label: 'Minha Conta' },
     ];
 
     // Check if we're on mobile
@@ -191,31 +192,6 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
                         );
                     })}
                 </nav>
-
-                {/* Footer - Mobile Account Link */}
-                <div style={{ padding: '16px' }}>
-                    {isMobile && (
-                        <NavLink
-                            to="/account"
-                            style={{ textDecoration: 'none' }}
-                        >
-                            <div style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '12px',
-                                padding: '12px 16px',
-                                borderRadius: '14px',
-                                color: location.pathname === '/account' ? '#FFFFFF' : 'var(--text-secondary)',
-                                background: location.pathname === '/account' ? 'var(--primary)' : 'var(--bg-secondary)',
-                                transition: 'all 0.2s ease',
-                                height: '48px'
-                            }}>
-                                <User size={20} />
-                                <span style={{ fontWeight: '500', fontSize: '0.95rem' }}>Minha Conta</span>
-                            </div>
-                        </NavLink>
-                    )}
-                </div>
             </aside>
         </>
     );

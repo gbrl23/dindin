@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useCards } from '../../hooks/useCards';
-import { X, Plus, ChevronDown } from 'lucide-react';
+import { X, Plus, ChevronDown, ArrowLeft } from 'lucide-react';
 import { validateName, validateDayOfMonth, validateAll, errorContainerStyle, getErrorMessageStyle } from '../../utils/validation';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function NewCardModal({ onClose, onSuccess, initialData = null }) {
     const { addCard, updateCard } = useCards();
+    const isMobile = useIsMobile();
 
     // Expanded Colors Palette
     const colors = [
@@ -126,32 +128,73 @@ export default function NewCardModal({ onClose, onSuccess, initialData = null })
     return (
         <div style={{
             position: 'fixed', inset: 0, zIndex: 2000,
-            background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center'
+            background: isMobile ? 'var(--bg-primary)' : 'rgba(0,0,0,0.4)',
+            backdropFilter: isMobile ? 'none' : 'blur(8px)',
+            display: 'flex',
+            alignItems: isMobile ? 'stretch' : 'center',
+            justifyContent: isMobile ? 'stretch' : 'center',
+            overflowY: 'auto'
         }}>
-            <div className="card animate-scale-in" style={{
-                width: '440px',
-                padding: '32px',
+            <div className={isMobile ? '' : 'card animate-scale-in'} style={{
+                width: isMobile ? '100%' : '440px',
+                padding: isMobile ? '16px' : '32px',
+                paddingTop: isMobile ? '0' : '32px',
                 position: 'relative',
-                maxHeight: '90vh',
+                minHeight: isMobile ? '100vh' : 'auto',
+                maxHeight: isMobile ? 'none' : '90vh',
                 overflowY: 'auto',
-                background: '#FFF',
-                borderRadius: '24px',
-                boxShadow: '0 24px 48px rgba(0,0,0,0.2)'
+                background: isMobile ? 'var(--bg-primary)' : '#FFF',
+                borderRadius: isMobile ? '0' : '24px',
+                boxShadow: isMobile ? 'none' : '0 24px 48px rgba(0,0,0,0.2)'
             }}>
-                <button
-                    onClick={onClose}
-                    style={{ position: 'absolute', right: '20px', top: '20px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)' }}
-                >
-                    <X size={24} />
-                </button>
+                {/* Header Mobile */}
+                {isMobile ? (
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '16px',
+                        padding: '16px 0',
+                        marginBottom: '16px',
+                        borderBottom: '1px solid var(--border)',
+                        position: 'sticky',
+                        top: 0,
+                        background: 'var(--bg-primary)',
+                        zIndex: 10
+                    }}>
+                        <button
+                            onClick={onClose}
+                            style={{
+                                background: 'transparent',
+                                border: 'none',
+                                cursor: 'pointer',
+                                color: 'var(--text-primary)',
+                                padding: '8px',
+                                marginLeft: '-8px'
+                            }}
+                        >
+                            <ArrowLeft size={24} />
+                        </button>
+                        <h2 style={{ fontSize: '1.2rem', fontWeight: '700', margin: 0 }}>
+                            {initialData ? 'Editar Cartão' : 'Novo Cartão'}
+                        </h2>
+                    </div>
+                ) : (
+                    <>
+                        <button
+                            onClick={onClose}
+                            style={{ position: 'absolute', right: '20px', top: '20px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)' }}
+                        >
+                            <X size={24} />
+                        </button>
 
-                <h2 style={{ fontSize: '1.4rem', fontWeight: '700', marginBottom: '8px', textAlign: 'center' }}>
-                    {initialData ? 'Editar Cartão' : 'Novo Cartão'}
-                </h2>
-                <p style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '32px' }}>
-                    Preencha os dados do seu cartão.
-                </p>
+                        <h2 style={{ fontSize: '1.4rem', fontWeight: '700', marginBottom: '8px', textAlign: 'center' }}>
+                            {initialData ? 'Editar Cartão' : 'Novo Cartão'}
+                        </h2>
+                        <p style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '32px' }}>
+                            Preencha os dados do seu cartão.
+                        </p>
+                    </>
+                )}
 
                 <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 

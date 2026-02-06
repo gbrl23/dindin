@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { X, Check } from 'lucide-react';
+import { X, Check, ArrowLeft } from 'lucide-react';
 import { useGroups } from '../../hooks/useGroups';
 import { validateName, validateAll, errorContainerStyle, getErrorMessageStyle } from '../../utils/validation';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function CreateGroupModal({ isOpen, onClose }) {
     const { createGroup } = useGroups();
+    const isMobile = useIsMobile();
     const [loading, setLoading] = useState(false);
     const [newGroupData, setNewGroupData] = useState({ name: '', description: '', icon: '✈️' });
     const [errors, setErrors] = useState({});
@@ -59,21 +61,65 @@ export default function CreateGroupModal({ isOpen, onClose }) {
 
     return (
         <div style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
-            backdropFilter: 'blur(4px)'
-        }} onClick={onClose}>
+            position: 'fixed', inset: 0,
+            background: isMobile ? 'var(--bg-primary)' : 'rgba(0,0,0,0.4)',
+            display: 'flex',
+            alignItems: isMobile ? 'stretch' : 'center',
+            justifyContent: isMobile ? 'stretch' : 'center',
+            zIndex: 1000,
+            backdropFilter: isMobile ? 'none' : 'blur(4px)',
+            overflowY: 'auto'
+        }} onClick={isMobile ? undefined : onClose}>
             <div
-                className="card animate-scale-in"
-                style={{ width: '90%', maxWidth: '400px', background: 'var(--bg-card)', padding: '24px' }}
+                className={isMobile ? '' : 'card animate-scale-in'}
+                style={{
+                    width: isMobile ? '100%' : '90%',
+                    maxWidth: isMobile ? 'none' : '400px',
+                    background: 'var(--bg-card)',
+                    padding: isMobile ? '16px' : '24px',
+                    paddingTop: isMobile ? '0' : '24px',
+                    minHeight: isMobile ? '100vh' : 'auto',
+                    borderRadius: isMobile ? '0' : '24px'
+                }}
                 onClick={e => e.stopPropagation()}
             >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                    <h3 style={{ fontSize: '1.2rem', fontWeight: '700' }}>Novo Grupo</h3>
-                    <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}>
-                        <X size={20} color="var(--text-secondary)" />
-                    </button>
-                </div>
+                {/* Header */}
+                {isMobile ? (
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '16px',
+                        padding: '16px 0',
+                        marginBottom: '16px',
+                        borderBottom: '1px solid var(--border)',
+                        position: 'sticky',
+                        top: 0,
+                        background: 'var(--bg-card)',
+                        zIndex: 10
+                    }}>
+                        <button
+                            onClick={onClose}
+                            style={{
+                                background: 'transparent',
+                                border: 'none',
+                                cursor: 'pointer',
+                                color: 'var(--text-primary)',
+                                padding: '8px',
+                                marginLeft: '-8px'
+                            }}
+                        >
+                            <ArrowLeft size={24} />
+                        </button>
+                        <h3 style={{ fontSize: '1.2rem', fontWeight: '700', margin: 0 }}>Novo Grupo</h3>
+                    </div>
+                ) : (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                        <h3 style={{ fontSize: '1.2rem', fontWeight: '700' }}>Novo Grupo</h3>
+                        <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}>
+                            <X size={20} color="var(--text-secondary)" />
+                        </button>
+                    </div>
+                )}
 
                 <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <div>

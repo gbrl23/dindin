@@ -376,60 +376,115 @@ export default function DashboardView() {
 
                     {/* 3. Detailed Statement */}
                     <div className="card" style={{ padding: '0', overflow: 'hidden', border: 'none' }}>
-                        <div style={{ padding: '24px 32px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-card)' }}>
+                        <div style={{ padding: isMobile ? '16px' : '24px 32px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-card)' }}>
                             <h3 style={{ fontSize: '1.1rem', fontWeight: '700' }}>Extrato Recente</h3>
                         </div>
 
-                        <div style={{ overflowX: 'auto' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.95rem' }}>
-                                <thead style={{ background: 'var(--bg-secondary)', color: 'var(--text-secondary)', fontSize: '0.85rem', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
-                                    <tr>
-                                        <th style={{ padding: '16px 32px', fontWeight: '600', width: '60px' }}>Icon</th>
-                                        <th style={{ padding: '16px 16px', fontWeight: '600' }}>Data</th>
-                                        <th style={{ padding: '16px 16px', fontWeight: '600' }}>Descrição</th>
-                                        <th style={{ padding: '16px 16px', fontWeight: '600' }}>Método</th>
-                                        <th style={{ padding: '16px 32px', fontWeight: '600', textAlign: 'right' }}>Valor</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {monthlyTransactions.length === 0 ? (
-                                        <tr>
-                                            <td colSpan="5" style={{ padding: '48px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                                                Nenhum lançamento neste mês.
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        monthlyTransactions.slice(0, 10).map(t => (
-                                            <tr key={t.id} style={{ borderBottom: '1px solid var(--border-light)', transition: 'background 0.2s' }} className="hover:bg-gray-50">
-                                                <td style={{ padding: '16px 32px' }}>
-                                                    <div style={{
-                                                        width: 40, height: 40, borderRadius: '12px',
-                                                        background: t.category_details ? `${t.category_details.color}20` : 'var(--bg-primary)',
-                                                        color: t.category_details ? t.category_details.color : 'inherit',
-                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                        fontSize: t.category_details ? '1.2rem' : '1rem'
-                                                    }}>
-                                                        {t.category_details ? t.category_details.icon :
-                                                            (t.type === 'income' ? <ArrowUp size={18} color="var(--success)" /> :
-                                                                t.type === 'investment' ? <TrendingUp size={18} color="var(--info)" /> :
-                                                                    <ArrowDown size={18} color="var(--danger)" />)
-                                                        }
-                                                    </div>
-                                                </td>
-                                                <td style={{ padding: '16px 16px', color: 'var(--text-secondary)', fontWeight: '500' }}>
+                        {isMobile ? (
+                            /* Mobile: Lista simplificada */
+                            <div style={{ padding: '8px 0' }}>
+                                {monthlyTransactions.length === 0 ? (
+                                    <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                        Nenhum lançamento neste mês.
+                                    </div>
+                                ) : (
+                                    monthlyTransactions.slice(0, 10).map(t => (
+                                        <div key={t.id} style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            padding: '12px 16px',
+                                            gap: '12px',
+                                            borderBottom: '1px solid var(--border-light)'
+                                        }}>
+                                            {/* Ícone */}
+                                            <div style={{
+                                                width: 36, height: 36, borderRadius: '10px',
+                                                background: t.category_details ? `${t.category_details.color}20` : 'var(--bg-primary)',
+                                                color: t.category_details ? t.category_details.color : 'inherit',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                fontSize: '1rem', flexShrink: 0
+                                            }}>
+                                                {t.category_details ? t.category_details.icon :
+                                                    (t.type === 'income' ? <ArrowUp size={16} color="var(--success)" /> :
+                                                        t.type === 'investment' ? <TrendingUp size={16} color="var(--info)" /> :
+                                                            <ArrowDown size={16} color="var(--danger)" />)
+                                                }
+                                            </div>
+                                            {/* Descrição */}
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ fontWeight: '600', fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                    {t.description}
+                                                </div>
+                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                                                     {displayDate(t.date, { day: '2-digit', month: 'short' })}
-                                                </td>
-                                                <td style={{ padding: '16px 16px', fontWeight: '600', color: 'var(--text-primary)' }}>{t.description}</td>
-                                                <td style={{ padding: '16px 16px', color: 'var(--text-secondary)' }}>{t.card?.name || 'Conta'}</td>
-                                                <td style={{ padding: '16px 32px', textAlign: 'right', fontWeight: '700', color: t.type === 'income' ? 'var(--success)' : 'var(--text-primary)' }}>
-                                                    {t.type === 'income' ? '+' : '-'} R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                </div>
+                                            </div>
+                                            {/* Valor */}
+                                            <div style={{
+                                                fontWeight: '700',
+                                                fontSize: '0.95rem',
+                                                color: t.type === 'income' ? 'var(--success)' : 'var(--text-primary)',
+                                                flexShrink: 0
+                                            }}>
+                                                {t.type === 'income' ? '+' : '-'} R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        ) : (
+                            /* Desktop: Tabela completa */
+                            <div style={{ overflowX: 'auto' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.95rem' }}>
+                                    <thead style={{ background: 'var(--bg-secondary)', color: 'var(--text-secondary)', fontSize: '0.85rem', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
+                                        <tr>
+                                            <th style={{ padding: '16px 32px', fontWeight: '600', width: '60px' }}>Icon</th>
+                                            <th style={{ padding: '16px 16px', fontWeight: '600' }}>Data</th>
+                                            <th style={{ padding: '16px 16px', fontWeight: '600' }}>Descrição</th>
+                                            <th style={{ padding: '16px 16px', fontWeight: '600' }}>Método</th>
+                                            <th style={{ padding: '16px 32px', fontWeight: '600', textAlign: 'right' }}>Valor</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {monthlyTransactions.length === 0 ? (
+                                            <tr>
+                                                <td colSpan="5" style={{ padding: '48px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                                    Nenhum lançamento neste mês.
                                                 </td>
                                             </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
+                                        ) : (
+                                            monthlyTransactions.slice(0, 10).map(t => (
+                                                <tr key={t.id} style={{ borderBottom: '1px solid var(--border-light)', transition: 'background 0.2s' }} className="hover:bg-gray-50">
+                                                    <td style={{ padding: '16px 32px' }}>
+                                                        <div style={{
+                                                            width: 40, height: 40, borderRadius: '12px',
+                                                            background: t.category_details ? `${t.category_details.color}20` : 'var(--bg-primary)',
+                                                            color: t.category_details ? t.category_details.color : 'inherit',
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                            fontSize: t.category_details ? '1.2rem' : '1rem'
+                                                        }}>
+                                                            {t.category_details ? t.category_details.icon :
+                                                                (t.type === 'income' ? <ArrowUp size={18} color="var(--success)" /> :
+                                                                    t.type === 'investment' ? <TrendingUp size={18} color="var(--info)" /> :
+                                                                        <ArrowDown size={18} color="var(--danger)" />)
+                                                            }
+                                                        </div>
+                                                    </td>
+                                                    <td style={{ padding: '16px 16px', color: 'var(--text-secondary)', fontWeight: '500' }}>
+                                                        {displayDate(t.date, { day: '2-digit', month: 'short' })}
+                                                    </td>
+                                                    <td style={{ padding: '16px 16px', fontWeight: '600', color: 'var(--text-primary)' }}>{t.description}</td>
+                                                    <td style={{ padding: '16px 16px', color: 'var(--text-secondary)' }}>{t.card?.name || 'Conta'}</td>
+                                                    <td style={{ padding: '16px 32px', textAlign: 'right', fontWeight: '700', color: t.type === 'income' ? 'var(--success)' : 'var(--text-primary)' }}>
+                                                        {t.type === 'income' ? '+' : '-'} R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </div>
                 </div>
 

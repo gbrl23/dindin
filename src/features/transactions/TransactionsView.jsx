@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useIsMobile } from '../../hooks/useIsMobile';
+import { useSwipe } from '../../hooks/useSwipe';
 import { useTransactions } from '../../hooks/useTransactions';
 import { useCards } from '../../hooks/useCards';
-// import { useGroups } from '../../hooks/useGroups'; // Removed Member Filter
 import { useCategories } from '../../hooks/useCategories';
 import { useProfiles } from '../../hooks/useProfiles';
 import { useAuth } from '../../contexts/AuthContext';
@@ -9,40 +10,147 @@ import { useDashboard } from '../../contexts/DashboardContext';
 import {
     Search, Filter, Download,
     ArrowUp, ArrowDown, TrendingUp, FileText,
-    CreditCard, User, Calendar, Edit2, Trash2, Check, X, Tag
+    CreditCard, User, Calendar, Edit2, Trash2, Check, X, Tag,
+    ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { parseLocalDate, displayDate } from '../../utils/dateUtils';
+import { parseLocalDate, displayDate, displayDateShort } from '../../utils/dateUtils';
+import {
+    SwipeableList,
+    SwipeableListItem,
+    SwipeAction,
+    TrailingActions,
+    LeadingActions,
+    Type as ListType
+} from 'react-swipeable-list';
+import 'react-swipeable-list/dist/styles.css';
+
+// --- COMPONENTS ---
+
+// Mobile 'Globo' Type Switcher
+function MobileTypeSwitcher({ selectedType, setSelectedType }) {
+    const types = [
+        { id: 'all', label: 'Todos' },
+        { id: 'income', label: 'Receitas' },
+        { id: 'expense', label: 'Despesas' },
+        { id: 'investment', label: 'Investimentos' },
+        { id: 'bill', label: 'Contas' }
+    ];
+
+    const currentIndex = types.findIndex(t => t.id === selectedType);
+
+    const handleNext = () => {
+        const nextIndex = (currentIndex + 1) % types.length;
+        setSelectedType(types[nextIndex].id);
+    };
+
+    const handlePrev = () => {
+        const prevIndex = (currentIndex - 1 + types.length) % types.length;
+        setSelectedType(types[prevIndex].id);
+    };
+
+    const swipeHandlers = useSwipe({
+        onSwipeLeft: handleNext,
+        onSwipeRight: handlePrev
+    });
+
+    const activeItem = types[currentIndex];
+
+    return (
+        <div
+            {...swipeHandlers}
+            style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: 'var(--bg-secondary)',
+                borderRadius: '16px',
+                padding: '8px', // Slightly larger padding
+                userSelect: 'none',
+                touchAction: 'pan-y' // Allow vertical scroll but capture horizontal
+            }}
+        >
+            <button
+                onClick={handlePrev}
+                style={{
+                    background: 'transparent', border: 'none',
+                    color: 'var(--text-tertiary)', padding: '8px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}
+            >
+                <ChevronLeft size={24} />
+            </button>
+
+            <div style={{
+                flex: 1,
+                textAlign: 'center',
+                fontWeight: '800', // Bold/Heavy font as requested
+                fontSize: '1rem',
+                color: selectedType === 'all' ? 'var(--text-primary)' : 'var(--primary)',
+                textTransform: 'uppercase',
+                letterSpacing: '1px',
+                animation: 'fadeIn 0.3s ease'
+            }}>
+                {activeItem.label}
+            </div>
+
+            <button
+                onClick={handleNext}
+                style={{
+                    background: 'transparent', border: 'none',
+                    color: 'var(--text-tertiary)', padding: '8px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}
+            >
+                <ChevronRight size={24} />
+            </button>
+        </div>
+    );
+}
 
 export default function TransactionsView() {
     const navigate = useNavigate();
+    const isMobile = useIsMobile();
     const { user } = useAuth();
     const { selectedDate } = useDashboard();
 
-    // Data Hooks
     // Data Hooks
     const { transactions, fetchTransactions, removeTransaction } = useTransactions();
     const { cards } = useCards();
     const { categories } = useCategories();
     const { profiles } = useProfiles();
-    // const { groups, getGroupMembers } = useGroups(); // Removed Member Filter
-    // const { groups, getGroupMembers } = useGroups(); // Removed Member Filter 
 
     // UI State
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedType, setSelectedType] = useState('all'); // all, expense, income, investment, bill
+    const [selectedType, setSelectedType] = useState('all');
     const [selectedCard, setSelectedCard] = useState('all');
-    // const [selectedMember, setSelectedMember] = useState('all'); // Removed
     const [selectedCategory, setSelectedCategory] = useState('all');
+    const [showFilters, setShowFilters] = useState(false); // Mobile filter toggle
 
-    // Flattened Member List (Unique) - Removed
-    // const [allMembers, setAllMembers] = useState([]);
+    // Mobile Selection Mode (Long-press to activate)
+    const [isSelectionMode, setIsSelectionMode] = useState(false);
+    const longPressTimer = useRef(null);
+
+    // Long-press handler para ativar modo seleção (igual Google Drive)
+    const handleLongPressStart = useCallback((transactionId) => {
+        if (!isMobile) return;
+        longPressTimer.current = setTimeout(() => {
+            setIsSelectionMode(true);
+            setSelectedIds([transactionId]);
+        }, 500); // 500ms para ativar long-press
+    }, [isMobile]);
+
+    const handleLongPressEnd = useCallback(() => {
+        if (longPressTimer.current) {
+            clearTimeout(longPressTimer.current);
+            longPressTimer.current = null;
+        }
+    }, []);
 
     useEffect(() => {
         fetchTransactions();
     }, [fetchTransactions]);
 
-    // Member loading effect removed
 
 
     // --- FILTER LOGIC ---
@@ -120,13 +228,20 @@ export default function TransactionsView() {
     // --- SELECTION STATE ---
     const [selectedIds, setSelectedIds] = useState([]);
 
-    const toggleSelection = (id) => {
-        if (selectedIds.includes(id)) {
-            setSelectedIds(selectedIds.filter(sid => sid !== id));
-        } else {
-            setSelectedIds([...selectedIds, id]);
+    // Sair do modo seleção quando não há itens selecionados
+    useEffect(() => {
+        if (selectedIds.length === 0 && isSelectionMode) {
+            setIsSelectionMode(false);
         }
-    };
+    }, [selectedIds, isSelectionMode]);
+
+    const toggleSelection = useCallback((id) => {
+        setSelectedIds(prev =>
+            prev.includes(id)
+                ? prev.filter(sid => sid !== id)
+                : [...prev, id]
+        );
+    }, []);
 
     const handleSelectAll = (e) => {
         if (e.target.checked) {
@@ -173,14 +288,16 @@ export default function TransactionsView() {
             {/* Header (Title + Global Actions) is in TopHeader component, we are in the Workspace area */}
             <h1 style={{ fontSize: '1.8rem', fontWeight: '800', letterSpacing: '-1px', marginBottom: '8px' }}>Histórico</h1>
 
-            {/* 1. Control Bar: Search + Tabs */}
-            <div className="card" style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* CONTROL BAR (Search, Tabs, Filters) */}
+            {isMobile ? (
+                // ========== MOBILE LAYOUT (Stacked: Switcher -> Search -> Filter Toggle) ==========
+                <div className="card" style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
-                {/* Search & Tabs Row used to be separate, let's merge or stack pleasantly */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '8px' }}>
+                    {/* 1. Type Switcher (Globo) */}
+                    <MobileTypeSwitcher selectedType={selectedType} setSelectedType={setSelectedType} />
 
-                    {/* Search */}
-                    <div style={{ position: 'relative', flex: 1, maxWidth: '400px' }}>
+                    {/* 2. Search Bar */}
+                    <div style={{ position: 'relative', width: '100%' }}>
                         <Search size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
                         <input
                             type="text"
@@ -194,94 +311,173 @@ export default function TransactionsView() {
                                 border: '1px solid var(--border)',
                                 background: 'var(--bg-secondary)',
                                 fontSize: '0.9rem',
-                                outline: 'none',
-                                transition: 'all 0.2s'
+                                outline: 'none'
                             }}
-                            onFocus={e => e.target.style.background = 'var(--bg-card)'}
-                            onBlur={e => e.target.style.background = 'var(--bg-secondary)'}
                         />
                     </div>
 
-                    {/* Tabs (Pills) */}
-                    <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '0px' }}>
-                        {[
-                            { id: 'all', label: 'Todos' },
-                            { id: 'income', label: 'Receitas' },
-                            { id: 'expense', label: 'Despesas' },
-                            { id: 'investment', label: 'Investimentos' },
-                            { id: 'bill', label: 'Contas' }
-                        ].map(tab => {
-                            const isActive = selectedType === tab.id;
-                            return (
-                                <button
-                                    key={tab.id}
-                                    onClick={() => setSelectedType(tab.id)}
-                                    style={{
-                                        padding: '10px 18px',
-                                        borderRadius: '24px',
-                                        border: isActive ? '1px solid var(--primary)' : '1px solid transparent',
-                                        background: isActive ? 'var(--bg-primary)' : 'transparent',
-                                        color: isActive ? 'var(--primary)' : 'var(--text-secondary)',
-                                        fontWeight: '600',
-                                        fontSize: '0.9rem',
-                                        cursor: 'pointer',
-                                        whiteSpace: 'nowrap',
-                                        transition: 'all 0.2s'
-                                    }}
-                                >
-                                    {tab.label}
-                                </button>
-                            )
-                        })}
+                    {/* 3. Filters Toggle & Content */}
+                    <div>
+                        <button
+                            onClick={() => setShowFilters(!showFilters)}
+                            style={{
+                                width: '100%',
+                                border: 'none',
+                                background: showFilters ? 'var(--bg-primary)' : 'transparent',
+                                color: showFilters ? 'var(--primary)' : 'var(--text-secondary)',
+                                borderRadius: '8px',
+                                padding: '8px 12px',
+                                fontSize: '0.9rem',
+                                outline: 'none',
+                                fontWeight: '600',
+                                display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                            }}
+                        >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Filter size={16} />
+                                <span>Filtros</span>
+                            </div>
+                            <span style={{ fontSize: '0.8rem' }}>{showFilters ? 'Ocultar' : 'Mostrar'}</span>
+                        </button>
+
+                        {/* Expanded Filters */}
+                        {showFilters && (
+                            <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px', padding: '4px' }}>
+                                {/* Card Filter */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--bg-secondary)', borderRadius: '12px', padding: '10px 12px', border: '1px solid var(--border)' }}>
+                                    <CreditCard size={18} color="var(--text-secondary)" />
+                                    <select
+                                        value={selectedCard}
+                                        onChange={e => setSelectedCard(e.target.value)}
+                                        style={{ background: 'transparent', border: 'none', fontSize: '0.95rem', outline: 'none', color: 'var(--text-primary)', width: '100%' }}
+                                    >
+                                        <option value="all">Todos os cartões</option>
+                                        {cards.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                    </select>
+                                </div>
+
+                                {/* Category Filter */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--bg-secondary)', borderRadius: '12px', padding: '10px 12px', border: '1px solid var(--border)' }}>
+                                    <Tag size={18} color="var(--text-secondary)" />
+                                    <select
+                                        value={selectedCategory}
+                                        onChange={e => setSelectedCategory(e.target.value)}
+                                        style={{ background: 'transparent', border: 'none', fontSize: '0.95rem', outline: 'none', color: 'var(--text-primary)', width: '100%' }}
+                                    >
+                                        <option value="all">Todas as categorias</option>
+                                        {categories.map(cat => (
+                                            <option key={cat.id} value={cat.id}>
+                                                {cat.icon} {cat.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
+            ) : (
+                // ========== DESKTOP LAYOUT (Original) ==========
+                <div className="card" style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {/* Search & Tabs */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '8px' }}>
+                        <div style={{ position: 'relative', flex: 1, maxWidth: '400px' }}>
+                            <Search size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
+                            <input
+                                type="text"
+                                placeholder="Buscar lançamentos..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                style={{
+                                    width: '100%',
+                                    padding: '12px 12px 12px 42px',
+                                    borderRadius: '12px',
+                                    border: '1px solid var(--border)',
+                                    background: 'var(--bg-secondary)',
+                                    fontSize: '0.9rem',
+                                    outline: 'none',
+                                    transition: 'all 0.2s'
+                                }}
+                                onFocus={e => e.target.style.background = 'var(--bg-card)'}
+                                onBlur={e => e.target.style.background = 'var(--bg-secondary)'}
+                            />
+                        </div>
 
-                {/* 2. Filters Row */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '0 8px 8px 8px', flexWrap: 'wrap' }}>
-
-                    {/* Card Filter */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-secondary)', borderRadius: '12px', padding: '8px 12px', border: '1px solid var(--border)' }}>
-                        <CreditCard size={16} color="var(--text-secondary)" />
-                        <select
-                            value={selectedCard}
-                            onChange={e => setSelectedCard(e.target.value)}
-                            style={{ background: 'transparent', border: 'none', fontSize: '0.9rem', outline: 'none', color: 'var(--text-primary)', minWidth: '140px' }}
-                        >
-                            <option value="all">Todos os cartões</option>
-                            {cards.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                        </select>
+                        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '0px' }}>
+                            {[
+                                { id: 'all', label: 'Todos' },
+                                { id: 'income', label: 'Receitas' },
+                                { id: 'expense', label: 'Despesas' },
+                                { id: 'investment', label: 'Investimentos' },
+                                { id: 'bill', label: 'Contas' }
+                            ].map(tab => {
+                                const isActive = selectedType === tab.id;
+                                return (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => setSelectedType(tab.id)}
+                                        style={{
+                                            padding: '10px 18px',
+                                            borderRadius: '24px',
+                                            border: isActive ? '1px solid var(--primary)' : '1px solid transparent',
+                                            background: isActive ? 'var(--bg-primary)' : 'transparent',
+                                            color: isActive ? 'var(--primary)' : 'var(--text-secondary)',
+                                            fontWeight: '600',
+                                            fontSize: '0.9rem',
+                                            cursor: 'pointer',
+                                            whiteSpace: 'nowrap',
+                                            transition: 'all 0.2s'
+                                        }}
+                                    >
+                                        {tab.label}
+                                    </button>
+                                )
+                            })}
+                        </div>
                     </div>
 
-                    {/* Category Filter (Replaces Member) */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-secondary)', borderRadius: '12px', padding: '8px 12px', border: '1px solid var(--border)' }}>
-                        <Tag size={16} color="var(--text-secondary)" />
-                        <select
-                            value={selectedCategory}
-                            onChange={e => setSelectedCategory(e.target.value)}
-                            style={{ background: 'transparent', border: 'none', fontSize: '0.9rem', outline: 'none', color: 'var(--text-primary)', minWidth: '140px' }}
+                    {/* Filters Row */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '0 8px 8px 8px', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-secondary)', borderRadius: '12px', padding: '8px 12px', border: '1px solid var(--border)' }}>
+                            <CreditCard size={16} color="var(--text-secondary)" />
+                            <select
+                                value={selectedCard}
+                                onChange={e => setSelectedCard(e.target.value)}
+                                style={{ background: 'transparent', border: 'none', fontSize: '0.9rem', outline: 'none', color: 'var(--text-primary)', minWidth: '140px' }}
+                            >
+                                <option value="all">Todos os cartões</option>
+                                {cards.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            </select>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-secondary)', borderRadius: '12px', padding: '8px 12px', border: '1px solid var(--border)' }}>
+                            <Tag size={16} color="var(--text-secondary)" />
+                            <select
+                                value={selectedCategory}
+                                onChange={e => setSelectedCategory(e.target.value)}
+                                style={{ background: 'transparent', border: 'none', fontSize: '0.9rem', outline: 'none', color: 'var(--text-primary)', minWidth: '140px' }}
+                            >
+                                <option value="all">Todas as categorias</option>
+                                {categories.map(cat => (
+                                    <option key={cat.id} value={cat.id}>
+                                        {cat.icon} {cat.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div style={{ flex: 1 }}></div>
+
+                        <button
+                            onClick={handleExport}
+                            style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'transparent', border: 'none', color: 'var(--text-primary)', fontWeight: '600', fontSize: '0.9rem', cursor: 'pointer' }}
                         >
-                            <option value="all">Todas as categorias</option>
-                            {categories.map(cat => (
-                                <option key={cat.id} value={cat.id}>
-                                    {cat.icon} {cat.name}
-                                </option>
-                            ))}
-                        </select>
+                            <Download size={18} />
+                            Exportar CSV
+                        </button>
                     </div>
-
-                    <div style={{ flex: 1 }}></div>
-
-                    {/* Export */}
-                    <button
-                        onClick={handleExport}
-                        style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'transparent', border: 'none', color: 'var(--text-primary)', fontWeight: '600', fontSize: '0.9rem', cursor: 'pointer' }}
-                    >
-                        <Download size={18} />
-                        Exportar CSV
-                    </button>
-
                 </div>
-            </div>
+            )}
 
             {/* Category Total Indicator */}
             {selectedCategory !== 'all' && (
@@ -297,8 +493,8 @@ export default function TransactionsView() {
             )}
 
 
-            {/* 3. Summary Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
+            {/* 3. Summary Cards (Mobile: 2x2 Grid, Desktop: 1x4) */}
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '24px' }}>
                 <div className="card" style={{ padding: '20px' }}>
                     <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>Total Receitas</div>
                     <div style={{ fontSize: '1.4rem', fontWeight: '700', color: 'var(--success)' }}>
@@ -400,7 +596,160 @@ export default function TransactionsView() {
                     <div style={{ padding: '64px', textAlign: 'center', color: 'var(--text-secondary)' }}>
                         <p>Nenhuma transação encontrada com os filtros atuais.</p>
                     </div>
+                ) : isMobile ? (
+                    /* ========== MOBILE: SwipeableList Real (Restored) ========== */
+                    <div style={{ padding: '0 16px', paddingBottom: '80px' }}>
+                        <SwipeableList fullSwipe={false}>
+                            {filteredTransactions.map(t => {
+                                const isSelected = selectedIds.includes(t.id);
+                                const categoryColor = t.category_details?.color || 'var(--text-secondary)';
+
+                                // Trailing actions (swipe left = delete)
+                                const trailingActions = () => (
+                                    <TrailingActions>
+                                        <SwipeAction
+                                            destructive={true}
+                                            onClick={() => handleDeleteSingle(t)}
+                                        >
+                                            <div style={{
+                                                background: 'var(--danger)',
+                                                color: '#FFF',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                padding: '0 24px',
+                                                height: '100%'
+                                            }}>
+                                                <Trash2 size={20} />
+                                            </div>
+                                        </SwipeAction>
+                                    </TrailingActions>
+                                );
+
+                                // Leading actions (swipe right = edit)
+                                const leadingActions = () => (
+                                    <LeadingActions>
+                                        <SwipeAction onClick={() => navigate(`/edit-transaction/${t.id}`)}>
+                                            <div style={{
+                                                background: 'var(--primary)',
+                                                color: '#FFF',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                padding: '0 24px',
+                                                height: '100%'
+                                            }}>
+                                                <Edit2 size={20} />
+                                            </div>
+                                        </SwipeAction>
+                                    </LeadingActions>
+                                );
+
+                                return (
+                                    <SwipeableListItem
+                                        key={t.id}
+                                        trailingActions={trailingActions()}
+                                        leadingActions={leadingActions()}
+                                    >
+                                        <div
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                padding: '12px 0',
+                                                gap: '12px',
+                                                borderBottom: '1px solid var(--border-light)',
+                                                background: isSelected ? 'var(--bg-secondary)' : 'var(--bg-card)',
+                                                width: '100%'
+                                            }}
+                                            onClick={() => {
+                                                if (isSelectionMode) {
+                                                    toggleSelection(t.id);
+                                                } else {
+                                                    navigate(`/edit-transaction/${t.id}`);
+                                                }
+                                            }}
+                                            onTouchStart={() => handleLongPressStart(t.id)}
+                                            onTouchEnd={handleLongPressEnd}
+                                            onTouchCancel={handleLongPressEnd}
+                                        >
+                                            {/* Checkbox (só aparece em modo seleção) */}
+                                            {isSelectionMode && (
+                                                <div style={{
+                                                    width: 22, height: 22,
+                                                    borderRadius: '6px',
+                                                    border: '2px solid ' + (isSelected ? 'var(--primary)' : 'var(--border)'),
+                                                    background: isSelected ? 'var(--primary)' : 'transparent',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    flexShrink: 0
+                                                }}>
+                                                    {isSelected && <Check size={14} color="#FFF" strokeWidth={3} />}
+                                                </div>
+                                            )}
+
+                                            {/* Ícone da Categoria */}
+                                            <div style={{
+                                                width: 40, height: 40, borderRadius: '12px',
+                                                background: t.category_details ? `${t.category_details.color}20` : 'var(--bg-secondary)',
+                                                color: categoryColor,
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                fontSize: '1.1rem', flexShrink: 0
+                                            }}>
+                                                {t.category_details?.icon ||
+                                                    (t.type === 'income' ? <ArrowUp size={18} color="var(--success)" /> :
+                                                        t.type === 'investment' ? <TrendingUp size={18} color="#3b82f6" /> :
+                                                            t.type === 'bill' ? <FileText size={18} color="#f59e0b" /> :
+                                                                <ArrowDown size={18} color="var(--danger)" />)
+                                                }
+                                            </div>
+
+                                            {/* Descrição e Data */}
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{
+                                                    fontWeight: '600',
+                                                    fontSize: '0.95rem',
+                                                    whiteSpace: 'nowrap',
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis'
+                                                }}>
+                                                    {t.description}
+                                                </div>
+                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                                    <span>{displayDateShort(t.date)}</span>
+                                                    {t.shares && t.shares.length > 1 && (
+                                                        <div style={{
+                                                            display: 'flex', alignItems: 'center', gap: '4px',
+                                                            background: 'rgba(59, 130, 246, 0.1)',
+                                                            color: 'var(--primary)',
+                                                            padding: '2px 6px',
+                                                            borderRadius: '4px',
+                                                            fontWeight: '600',
+                                                            fontSize: '0.7rem'
+                                                        }}>
+                                                            <User size={10} />
+                                                            {t.shares.length - 1}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Valor */}
+                                            <div style={{
+                                                fontWeight: '700',
+                                                fontSize: '0.95rem',
+                                                color: t.type === 'income' ? 'var(--success)' : 'var(--text-primary)',
+                                                flexShrink: 0,
+                                                textAlign: 'right'
+                                            }}>
+                                                {t.type === 'income' ? '+' : '-'} R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                            </div>
+                                        </div>
+                                    </SwipeableListItem>
+                                );
+                            })}
+                        </SwipeableList>
+                    </div>
                 ) : (
+                    /* ========== DESKTOP: Tabela original ========== */
                     <div style={{ overflowX: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.95rem' }}>
                             <thead style={{ background: 'var(--bg-secondary)', color: 'var(--text-secondary)', fontSize: '0.85rem', textAlign: 'left', borderBottom: '1px solid var(--border)' }}>

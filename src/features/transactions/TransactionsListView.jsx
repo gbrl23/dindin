@@ -1,25 +1,23 @@
-import React, { useState, useEffect } from 'react';
-
-// Hook para detectar mobile
-const useIsMobile = () => {
-    const [isMobile, setIsMobile] = useState(false);
-    useEffect(() => {
-        const check = () => setIsMobile(window.innerWidth <= 768);
-        check();
-        window.addEventListener('resize', check);
-        return () => window.removeEventListener('resize', check);
-    }, []);
-    return isMobile;
-};
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import { useTransactions } from '../../hooks/useTransactions';
 import { useCategories } from '../../hooks/useCategories';
 import { useAuth } from '../../contexts/AuthContext';
 import { useProfiles } from '../../hooks/useProfiles';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Trash2, Search, Calendar, Plus, CreditCard, Edit2, ChevronLeft, ChevronRight, FileText, CheckCircle, Clock, Check, Layers, Filter, Tag } from 'lucide-react';
+import { ArrowLeft, Trash2, Search, Calendar, Plus, CreditCard, Edit2, ChevronLeft, ChevronRight, FileText, CheckCircle, Clock, Check, Layers, Filter, Tag, ArrowUp, ArrowDown, TrendingUp } from 'lucide-react';
 import ImportInvoiceModal from './ImportInvoiceModal';
 import SeriesActionModal from '../../components/SeriesActionModal';
 import { parseLocalDate, displayDateShort } from '../../utils/dateUtils';
+import {
+    SwipeableList,
+    SwipeableListItem,
+    SwipeAction,
+    TrailingActions,
+    LeadingActions,
+    Type as ListType
+} from 'react-swipeable-list';
+import 'react-swipeable-list/dist/styles.css';
 
 export default function TransactionsListView() {
     const navigate = useNavigate();
@@ -46,6 +44,33 @@ export default function TransactionsListView() {
 
     // Delete Modal State
     const [deleteModal, setDeleteModal] = useState({ show: false, id: null, seriesId: null, isBulk: false });
+
+    // Mobile Selection Mode (Long-press to activate)
+    const [isSelectionMode, setIsSelectionMode] = useState(false);
+    const longPressTimer = useRef(null);
+
+    // Long-press handler para ativar modo seleção (igual Google Drive)
+    const handleLongPressStart = useCallback((transactionId) => {
+        if (!isMobile) return;
+        longPressTimer.current = setTimeout(() => {
+            setIsSelectionMode(true);
+            setSelectedIds([transactionId]);
+        }, 500); // 500ms para ativar long-press
+    }, [isMobile]);
+
+    const handleLongPressEnd = useCallback(() => {
+        if (longPressTimer.current) {
+            clearTimeout(longPressTimer.current);
+            longPressTimer.current = null;
+        }
+    }, []);
+
+    // Sair do modo seleção quando não há itens selecionados
+    useEffect(() => {
+        if (selectedIds.length === 0 && isSelectionMode) {
+            setIsSelectionMode(false);
+        }
+    }, [selectedIds, isSelectionMode]);
 
     useEffect(() => {
         fetchTransactions();
@@ -113,6 +138,17 @@ export default function TransactionsListView() {
     // User asked for "Navigation per month".
     // For now, let's just list them sorted by date desc.
     const sortedTransactions = [...filteredTransactions].sort((a, b) => parseLocalDate(b.date) - parseLocalDate(a.date));
+
+    // Selection state
+    const [selectedIds, setSelectedIds] = useState([]);
+
+    const toggleSelection = useCallback((id) => {
+        setSelectedIds(prev =>
+            prev.includes(id)
+                ? prev.filter(x => x !== id)
+                : [...prev, id]
+        );
+    }, []);
 
     const handleDelete = async (transaction) => {
         if (transaction.series_id) {
@@ -376,12 +412,155 @@ export default function TransactionsListView() {
             </div>
 
             {/* List */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '0' : '12px' }}>
                 {sortedTransactions.length === 0 ? (
                     <div style={{ textAlign: 'center', color: 'var(--text-secondary)', marginTop: '40px' }}>
                         Nenhum lançamento em {currentMonthLabel}.
                     </div>
+                ) : isMobile ? (
+                    /* ========== MOBILE: SwipeableList com layout compacto ========== */
+                    <SwipeableList type={ListType.IOS} fullSwipe={false}>
+                        {sortedTransactions.map(t => {
+                            const isSelected = selectedIds.includes(t.id);
+                            const categoryColor = t.category_details?.color || 'var(--text-secondary)';
+
+                            // Trailing actions (swipe left = delete)
+                            const trailingActions = () => (
+                                <TrailingActions>
+                                    <SwipeAction
+                                        destructive={true}
+                                        onClick={() => handleDelete(t)}
+                                    >
+                                        <div style={{
+                                            background: 'var(--danger)',
+                                            color: '#FFF',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            padding: '0 24px',
+                                            height: '100%'
+                                        }}>
+                                            <Trash2 size={20} />
+                                        </div>
+                                    </SwipeAction>
+                                </TrailingActions>
+                            );
+
+                            // Leading actions (swipe right = edit)
+                            const leadingActions = () => (
+                                <LeadingActions>
+                                    <SwipeAction onClick={() => navigate(`/edit-transaction/${t.id}`)}>
+                                        <div style={{
+                                            background: 'var(--primary)',
+                                            color: '#FFF',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            padding: '0 24px',
+                                            height: '100%'
+                                        }}>
+                                            <Edit2 size={20} />
+                                        </div>
+                                    </SwipeAction>
+                                </LeadingActions>
+                            );
+
+                            return (
+                                <SwipeableListItem
+                                    key={t.id}
+                                    trailingActions={trailingActions()}
+                                    leadingActions={leadingActions()}
+                                >
+                                    <div
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            padding: '12px 0',
+                                            gap: '12px',
+                                            borderBottom: '1px solid var(--border-light)',
+                                            background: isSelected ? 'var(--bg-secondary)' : 'var(--bg-card)',
+                                            width: '100%'
+                                        }}
+                                        onClick={() => {
+                                            if (isSelectionMode) {
+                                                toggleSelection(t.id);
+                                            } else {
+                                                navigate(`/edit-transaction/${t.id}`);
+                                            }
+                                        }}
+                                        onTouchStart={() => handleLongPressStart(t.id)}
+                                        onTouchEnd={handleLongPressEnd}
+                                        onTouchCancel={handleLongPressEnd}
+                                    >
+                                        {/* Checkbox (só aparece em modo seleção) */}
+                                        {isSelectionMode && (
+                                            <div style={{
+                                                width: 22, height: 22,
+                                                borderRadius: '6px',
+                                                border: '2px solid ' + (isSelected ? 'var(--primary)' : 'var(--border)'),
+                                                background: isSelected ? 'var(--primary)' : 'transparent',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                flexShrink: 0
+                                            }}>
+                                                {isSelected && <Check size={14} color="#FFF" strokeWidth={3} />}
+                                            </div>
+                                        )}
+
+                                        {/* Ícone da Categoria */}
+                                        <div style={{
+                                            width: 40, height: 40, borderRadius: '12px',
+                                            background: t.category_details ? `${categoryColor}20` : 'var(--bg-secondary)',
+                                            color: categoryColor,
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            fontSize: '1.1rem', flexShrink: 0
+                                        }}>
+                                            {t.category_details?.icon ||
+                                                (t.type === 'income' ? <ArrowUp size={18} color="var(--success)" /> :
+                                                    t.type === 'investment' ? <TrendingUp size={18} color="#3b82f6" /> :
+                                                        <ArrowDown size={18} color="var(--danger)" />)
+                                            }
+                                        </div>
+
+                                        {/* Descrição e Data */}
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{
+                                                fontWeight: '600',
+                                                fontSize: '0.95rem',
+                                                whiteSpace: 'nowrap',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis'
+                                            }}>
+                                                {t.description}
+                                            </div>
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                                <span>{displayDateShort(t.date)}</span>
+                                                {t.shares && t.shares.length > 0 && (
+                                                    <span style={{ color: 'var(--primary)' }}>
+                                                        • Dividido c/ {t.shares.length}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Valor */}
+                                        <div style={{
+                                            fontWeight: '700',
+                                            fontSize: '0.95rem',
+                                            color: t.type === 'income' ? 'var(--success)' :
+                                                t.type === 'investment' ? '#3b82f6' :
+                                                    'var(--text-primary)',
+                                            flexShrink: 0,
+                                            textAlign: 'right'
+                                        }}>
+                                            {t.type === 'income' ? '+' : '-'} R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                        </div>
+                                    </div>
+                                </SwipeableListItem>
+                            );
+                        })}
+                    </SwipeableList>
                 ) : (
+                    /* ========== DESKTOP: Layout original com checkbox e botões ========== */
                     sortedTransactions.map(t => {
                         const isSelected = selectedIds.includes(t.id);
                         return (

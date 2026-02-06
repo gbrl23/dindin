@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, Check } from 'lucide-react';
+import { Bell, Check, X } from 'lucide-react';
 
 export default function NotificationsDropdown({ notifications, onAcceptInvite, onClose }) {
     const handleAccept = async (notification) => {
@@ -11,20 +11,7 @@ export default function NotificationsDropdown({ notifications, onAcceptInvite, o
     };
 
     return (
-        <div style={{
-            position: 'absolute',
-            top: '120%',
-            right: 0,
-            width: '320px',
-            maxHeight: '400px',
-            overflowY: 'auto',
-            background: '#FFFFFF',
-            borderRadius: '16px',
-            boxShadow: 'var(--shadow-lg)',
-            padding: '8px',
-            zIndex: 100,
-            border: '1px solid rgba(0,0,0,0.05)'
-        }}>
+        <>
             {/* Header */}
             <div style={{
                 padding: '12px 12px 8px',
@@ -126,6 +113,6 @@ export default function NotificationsDropdown({ notifications, onAcceptInvite, o
                     )}
                 </div>
             ))}
-        </div>
+        </>
     );
 }

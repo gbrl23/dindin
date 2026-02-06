@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import TopHeader from './TopHeader';
+import NotificationsDropdown from './NotificationsDropdown';
 import NewTransactionModal from '../../features/transactions/NewTransactionModal';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useDashboard } from '../../contexts/DashboardContext';
-import { Menu, Bell } from 'lucide-react';
+import { Menu, Bell, X } from 'lucide-react';
 import { useNotifications } from '../../hooks/useNotifications';
+import { useGroups } from '../../hooks/useGroups';
 
 export default function MainLayout({ children }) {
     const location = useLocation();
     const navigate = useNavigate();
     const { isTransactionModalOpen, closeTransactionModal, openTransactionModal, modalType } = useDashboard();
     const { notifications } = useNotifications();
+    const { acceptInvite } = useGroups();
 
     // Count unread notifications
     const unreadCount = notifications?.filter(n => !n.read)?.length || 0;
@@ -20,6 +23,7 @@ export default function MainLayout({ children }) {
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
+    const [showNotifications, setShowNotifications] = useState(false);
 
     // Check screen size
     useEffect(() => {
@@ -91,43 +95,67 @@ export default function MainLayout({ children }) {
                                     Dindin
                                 </span>
                             </div>
-                            <button
-                                onClick={() => navigate('/account')}
-                                style={{
-                                    width: '44px',
-                                    height: '44px',
-                                    background: 'var(--bg-card)',
-                                    border: '1px solid var(--border)',
-                                    borderRadius: '12px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    cursor: 'pointer',
-                                    color: 'var(--text-primary)',
-                                    position: 'relative'
-                                }}
-                            >
-                                <Bell size={20} />
-                                {unreadCount > 0 && (
-                                    <span style={{
-                                        position: 'absolute',
-                                        top: '6px',
-                                        right: '6px',
-                                        width: '16px',
-                                        height: '16px',
-                                        background: 'var(--danger)',
-                                        borderRadius: '50%',
-                                        color: '#fff',
-                                        fontSize: '0.65rem',
-                                        fontWeight: '700',
+                            <div style={{ position: 'relative' }}>
+                                <button
+                                    onClick={() => setShowNotifications(!showNotifications)}
+                                    style={{
+                                        width: '44px',
+                                        height: '44px',
+                                        background: showNotifications ? 'var(--primary)' : 'var(--bg-card)',
+                                        border: '1px solid var(--border)',
+                                        borderRadius: '12px',
                                         display: 'flex',
                                         alignItems: 'center',
-                                        justifyContent: 'center'
+                                        justifyContent: 'center',
+                                        cursor: 'pointer',
+                                        color: showNotifications ? '#fff' : 'var(--text-primary)',
+                                        position: 'relative'
+                                    }}
+                                >
+                                    <Bell size={20} />
+                                    {unreadCount > 0 && (
+                                        <span style={{
+                                            position: 'absolute',
+                                            top: '6px',
+                                            right: '6px',
+                                            width: '16px',
+                                            height: '16px',
+                                            background: 'var(--danger)',
+                                            borderRadius: '50%',
+                                            color: '#fff',
+                                            fontSize: '0.65rem',
+                                            fontWeight: '700',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
+                                        }}>
+                                            {unreadCount > 9 ? '9+' : unreadCount}
+                                        </span>
+                                    )}
+                                </button>
+                                {showNotifications && (
+                                    <div style={{
+                                        position: 'fixed',
+                                        top: '70px',
+                                        left: '16px',
+                                        right: '16px',
+                                        maxHeight: 'calc(100vh - 100px)',
+                                        overflowY: 'auto',
+                                        background: '#FFFFFF',
+                                        borderRadius: '16px',
+                                        boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+                                        padding: '8px',
+                                        zIndex: 100,
+                                        border: '1px solid rgba(0,0,0,0.05)'
                                     }}>
-                                        {unreadCount > 9 ? '9+' : unreadCount}
-                                    </span>
+                                        <NotificationsDropdown
+                                            notifications={notifications}
+                                            onAcceptInvite={acceptInvite}
+                                            onClose={() => setShowNotifications(false)}
+                                        />
+                                    </div>
                                 )}
-                            </button>
+                            </div>
                         </div>
                     )}
 

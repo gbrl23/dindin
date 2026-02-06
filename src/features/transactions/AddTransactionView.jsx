@@ -1,17 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 
-// Hook para detectar mobile
-const useIsMobile = () => {
-    const [isMobile, setIsMobile] = useState(false);
-    useEffect(() => {
-        const check = () => setIsMobile(window.innerWidth <= 768);
-        check();
-        window.addEventListener('resize', check);
-        return () => window.removeEventListener('resize', check);
-    }, []);
-    return isMobile;
-};
+import { useIsMobile } from '../../hooks/useIsMobile';
 import { useTransactions } from '../../hooks/useTransactions';
 import { useProfiles } from '../../hooks/useProfiles';
 import { useCards } from '../../hooks/useCards';
@@ -653,29 +643,54 @@ export default function AddTransactionView() {
                                         if (year && (year < 2000 || year > 2099)) return;
                                         setDate(value);
                                     }}
-                                    style={{ width: '100%', padding: '14px 14px 14px 44px', borderRadius: '16px', background: '#F8F8FA', border: 'none', fontSize: '0.9rem', fontWeight: '500', outline: 'none' }}
+                                    style={{
+                                        width: '100%',
+                                        padding: '14px 14px 14px 44px',
+                                        borderRadius: '16px',
+                                        background: '#F8F8FA',
+                                        border: 'none',
+                                        fontSize: '0.9rem',
+                                        fontWeight: '500',
+                                        outline: 'none',
+                                        minWidth: 0,
+                                        boxSizing: 'border-box'
+                                    }}
                                 />
                             </div>
                         </div>
                         {/* Competence Date Field */}
-                        <div>
-                            <label style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '8px', display: 'block' }}>Mês de Competência</label>
-                            <div style={{ position: 'relative' }}>
-                                <Calendar size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
-                                <input
-                                    type="date"
-                                    value={competenceDate}
-                                    onChange={(e) => {
-                                        setCompetenceDate(e.target.value);
-                                        setIsCompetenceManual(true);
-                                    }}
-                                    style={{ width: '100%', padding: '14px 14px 14px 44px', borderRadius: '16px', background: '#F8F8FA', border: 'none', fontSize: '0.9rem', fontWeight: '500', outline: 'none' }}
-                                />
+                        {/* Competence Date Field - Only for Income/Investment */}
+                        {(type === 'income' || type === 'investment') && (
+                            <div>
+                                <label style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '8px', display: 'block' }}>Mês de Competência</label>
+                                <div style={{ position: 'relative' }}>
+                                    <Calendar size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
+                                    <input
+                                        type="date"
+                                        value={competenceDate}
+                                        onChange={(e) => {
+                                            setCompetenceDate(e.target.value);
+                                            setIsCompetenceManual(true);
+                                        }}
+                                        style={{
+                                            width: '100%',
+                                            padding: '14px 14px 14px 44px',
+                                            borderRadius: '16px',
+                                            background: '#F8F8FA',
+                                            border: 'none',
+                                            fontSize: '0.9rem',
+                                            fontWeight: '500',
+                                            outline: 'none',
+                                            minWidth: 0, /* Prevent flex/grid overflow */
+                                            boxSizing: 'border-box' /* Fix padding overflow */
+                                        }}
+                                    />
+                                </div>
+                                <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', marginTop: '4px', marginLeft: '4px' }}>
+                                    A qual mês esta receita/despesa se refere?
+                                </div>
                             </div>
-                            <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', marginTop: '4px', marginLeft: '4px' }}>
-                                A qual mês esta receita/despesa se refere?
-                            </div>
-                        </div>
+                        )}
                         {type === 'expense' && (
                             <div>
                                 <label style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '8px', display: 'block' }}>Cartão</label>

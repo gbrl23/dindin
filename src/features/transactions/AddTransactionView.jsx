@@ -1,5 +1,17 @@
 
 import React, { useState, useEffect } from 'react';
+
+// Hook para detectar mobile
+const useIsMobile = () => {
+    const [isMobile, setIsMobile] = useState(false);
+    useEffect(() => {
+        const check = () => setIsMobile(window.innerWidth <= 768);
+        check();
+        window.addEventListener('resize', check);
+        return () => window.removeEventListener('resize', check);
+    }, []);
+    return isMobile;
+};
 import { useTransactions } from '../../hooks/useTransactions';
 import { useProfiles } from '../../hooks/useProfiles';
 import { useCards } from '../../hooks/useCards';
@@ -22,6 +34,7 @@ export default function AddTransactionView() {
     const { id } = useParams();
     const location = useLocation();
     const { user } = useAuth();
+    const isMobile = useIsMobile();
 
     // Hooks
     const { profiles } = useProfiles();
@@ -460,9 +473,9 @@ export default function AddTransactionView() {
     };
 
     return (
-        <div className="container" style={{ paddingBottom: '120px', maxWidth: '600px', margin: '0 auto' }}>
+        <div className="container" style={{ paddingBottom: isMobile ? '100px' : '120px', maxWidth: '600px', margin: '0 auto', padding: isMobile ? '0 16px' : '0' }}>
             {/* Header */}
-            <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px', marginTop: '16px' }}>
+            <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: isMobile ? '20px' : '32px', marginTop: '16px' }}>
                 <button onClick={() => navigate(-1)} style={{ width: 40, height: 40, borderRadius: '12px', background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-primary)', border: 'none', cursor: 'pointer' }}>
                     <ArrowLeft size={20} />
                 </button>
@@ -534,13 +547,13 @@ export default function AddTransactionView() {
                             onChange={handleAmountChange}
                             placeholder="0,00"
                             style={{
-                                fontSize: '3.5rem',
+                                fontSize: isMobile ? '2rem' : '3.5rem',
                                 fontWeight: '700',
                                 color: 'var(--text-primary)',
                                 background: 'transparent',
                                 border: 'none',
                                 outline: 'none',
-                                width: '240px',
+                                width: isMobile ? '180px' : '240px',
                                 textAlign: 'center'
                             }}
                         />
@@ -624,7 +637,7 @@ export default function AddTransactionView() {
                     </div>
 
                     {/* Date & Card Row */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px' }}>
                         <div>
                             <label style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '8px', display: 'block' }}>Data</label>
                             <div style={{ position: 'relative' }}>

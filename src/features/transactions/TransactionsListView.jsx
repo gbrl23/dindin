@@ -1,4 +1,16 @@
 import React, { useState, useEffect } from 'react';
+
+// Hook para detectar mobile
+const useIsMobile = () => {
+    const [isMobile, setIsMobile] = useState(false);
+    useEffect(() => {
+        const check = () => setIsMobile(window.innerWidth <= 768);
+        check();
+        window.addEventListener('resize', check);
+        return () => window.removeEventListener('resize', check);
+    }, []);
+    return isMobile;
+};
 import { useTransactions } from '../../hooks/useTransactions';
 import { useCategories } from '../../hooks/useCategories';
 import { useAuth } from '../../contexts/AuthContext';
@@ -11,6 +23,7 @@ import { parseLocalDate, displayDateShort } from '../../utils/dateUtils';
 
 export default function TransactionsListView() {
     const navigate = useNavigate();
+    const isMobile = useIsMobile();
     const { transactions, removeTransaction, updateTransaction, fetchTransactions, removeTransactionSeries } = useTransactions();
     const { user } = useAuth();
     const { profiles } = useProfiles();
@@ -209,9 +222,9 @@ export default function TransactionsListView() {
     }
 
     return (
-        <div className="container" style={{ paddingBottom: '80px' }}>
+        <div className="container" style={{ paddingBottom: '80px', padding: isMobile ? '0 16px 80px' : '0' }}>
             {/* Header - Contextual */}
-            <header style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '48px' }}>
+            <header style={{ marginBottom: isMobile ? '16px' : '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '48px', flexWrap: 'wrap', gap: isMobile ? '8px' : '0' }}>
                 {selectedIds.length > 0 ? (
                     // Contextual Header (Drive Style)
                     <div className="animate-fade-in" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', background: 'var(--primary)', color: '#fff', padding: '0 16px', borderRadius: '16px', height: '100%' }}>
@@ -232,28 +245,28 @@ export default function TransactionsListView() {
                     <>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <button onClick={() => navigate('/')} style={{ background: 'transparent', color: 'var(--text-primary)' }}>
-                                <ArrowLeft size={24} />
+                                <ArrowLeft size={isMobile ? 20 : 24} />
                             </button>
-                            <h1 className="text-gradient" style={{ fontSize: '1.8rem', fontWeight: '800' }}>
+                            <h1 className="text-gradient" style={{ fontSize: isMobile ? '1.3rem' : '1.8rem', fontWeight: '800' }}>
                                 Histórico
                             </h1>
                         </div>
-                        <div>
+                        <div style={{ display: 'flex', gap: '8px' }}>
                             <button
                                 onClick={() => setShowImportModal(true)}
                                 className="btn"
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px', fontSize: '0.9rem', marginRight: '8px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: isMobile ? '0' : '8px', padding: isMobile ? '8px' : '8px 16px', fontSize: '0.9rem', background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
                             >
                                 <FileText size={18} />
-                                Importar
+                                {!isMobile && 'Importar'}
                             </button>
                             <button
                                 onClick={() => navigate('/add-transaction')}
                                 className="btn btn-primary"
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px', fontSize: '0.9rem' }}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: isMobile ? '0' : '8px', padding: isMobile ? '8px' : '8px 16px', fontSize: '0.9rem' }}
                             >
                                 <Plus size={18} />
-                                Novo
+                                {!isMobile && 'Novo'}
                             </button>
                         </div>
                     </>

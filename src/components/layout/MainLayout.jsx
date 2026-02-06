@@ -1,16 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import TopHeader from './TopHeader';
 import NewTransactionModal from '../../features/transactions/NewTransactionModal';
 import { useLocation } from 'react-router-dom';
 import { useDashboard } from '../../contexts/DashboardContext';
+import { Menu } from 'lucide-react';
 
 export default function MainLayout({ children }) {
     const location = useLocation();
     const { isTransactionModalOpen, closeTransactionModal, openTransactionModal, modalType } = useDashboard();
 
-    // Sidebar State (Managed here for layout adjustment)
+    // Sidebar State
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
+
+    // Check screen size
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth <= 768);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     // Don't show sidebar on login/signup pages
     const isAuthPage = ['/login', '/signup', '/register'].includes(location.pathname);
@@ -21,19 +32,89 @@ export default function MainLayout({ children }) {
 
     return (
         <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex' }}>
-            <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
+            <Sidebar
+                collapsed={sidebarCollapsed}
+                setCollapsed={setSidebarCollapsed}
+                mobileOpen={mobileMenuOpen}
+                setMobileOpen={setMobileMenuOpen}
+            />
 
             <main style={{
                 flex: 1,
-                marginLeft: sidebarCollapsed ? '80px' : '260px', // Dynamic margin
-                padding: '32px 40px', // More breathing room
-                maxWidth: `calc(100vw - ${sidebarCollapsed ? '80px' : '260px'})`,
+                marginLeft: isMobile ? 0 : (sidebarCollapsed ? '80px' : '260px'),
+                padding: isMobile ? '16px' : '32px 40px',
+                maxWidth: isMobile ? '100%' : `calc(100vw - ${sidebarCollapsed ? '80px' : '260px'})`,
                 minWidth: 0,
-                transition: 'margin-left 0.3s ease, max-width 0.3s ease'
+                transition: 'margin-left 0.3s ease, max-width 0.3s ease, padding 0.3s ease'
             }}>
-                <div style={{ maxWidth: '1400px', margin: '0 auto' }}> { /* Wider Container */}
-                    {location.pathname !== '/account' && (
+                <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+                    {/* Mobile Header with Menu Button */}
+                    {isMobile && (
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            marginBottom: '16px',
+                            paddingBottom: '16px',
+                            borderBottom: '1px solid var(--border)'
+                        }}>
+                            <button
+                                onClick={() => setMobileMenuOpen(true)}
+                                style={{
+                                    width: '44px',
+                                    height: '44px',
+                                    background: 'var(--bg-card)',
+                                    border: '1px solid var(--border)',
+                                    borderRadius: '12px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    cursor: 'pointer',
+                                    color: 'var(--text-primary)'
+                                }}
+                            >
+                                <Menu size={22} />
+                            </button>
+                            <span style={{
+                                fontSize: '1.2rem',
+                                fontWeight: '700',
+                                color: 'var(--text-primary)'
+                            }}>
+                                Dindin
+                            </span>
+                        </div>
+                    )}
+
+                    {location.pathname !== '/account' && !isMobile && (
                         <TopHeader onOpenNewTransaction={() => openTransactionModal('expense')} />
+                    )}
+
+                    {/* Mobile Quick Add Button */}
+                    {isMobile && location.pathname !== '/account' && (
+                        <button
+                            onClick={() => openTransactionModal('expense')}
+                            style={{
+                                position: 'fixed',
+                                bottom: '24px',
+                                right: '24px',
+                                width: '56px',
+                                height: '56px',
+                                borderRadius: '50%',
+                                background: 'var(--primary)',
+                                color: '#fff',
+                                border: 'none',
+                                boxShadow: '0 4px 20px rgba(81, 0, 255, 0.4)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                fontSize: '1.5rem',
+                                fontWeight: '300',
+                                zIndex: 30
+                            }}
+                        >
+                            +
+                        </button>
                     )}
 
                     {children}

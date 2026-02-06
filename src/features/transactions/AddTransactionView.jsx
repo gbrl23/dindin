@@ -630,7 +630,7 @@ export default function AddTransactionView() {
                     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px' }}>
                         <div>
                             <label style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '8px', display: 'block' }}>Data</label>
-                            <div style={{ position: 'relative' }}>
+                            <div style={{ position: 'relative', width: '100%', overflow: 'hidden', borderRadius: '16px' }}>
                                 <Calendar size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
                                 <input
                                     type="date"
@@ -645,6 +645,7 @@ export default function AddTransactionView() {
                                     }}
                                     style={{
                                         width: '100%',
+                                        maxWidth: '100%',
                                         padding: '14px 14px 14px 44px',
                                         borderRadius: '16px',
                                         background: '#F8F8FA',
@@ -663,7 +664,7 @@ export default function AddTransactionView() {
                         {(type === 'income' || type === 'investment') && (
                             <div>
                                 <label style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '8px', display: 'block' }}>Mês de Competência</label>
-                                <div style={{ position: 'relative' }}>
+                                <div style={{ position: 'relative', width: '100%', overflow: 'hidden', borderRadius: '16px' }}>
                                     <Calendar size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
                                     <input
                                         type="date"
@@ -674,6 +675,7 @@ export default function AddTransactionView() {
                                         }}
                                         style={{
                                             width: '100%',
+                                            maxWidth: '100%',
                                             padding: '14px 14px 14px 44px',
                                             borderRadius: '16px',
                                             background: '#F8F8FA',

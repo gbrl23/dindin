@@ -2,13 +2,19 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import TopHeader from './TopHeader';
 import NewTransactionModal from '../../features/transactions/NewTransactionModal';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useDashboard } from '../../contexts/DashboardContext';
-import { Menu } from 'lucide-react';
+import { Menu, Bell } from 'lucide-react';
+import { useNotifications } from '../../hooks/useNotifications';
 
 export default function MainLayout({ children }) {
     const location = useLocation();
+    const navigate = useNavigate();
     const { isTransactionModalOpen, closeTransactionModal, openTransactionModal, modalType } = useDashboard();
+    const { notifications } = useNotifications();
+
+    // Count unread notifications
+    const unreadCount = notifications?.filter(n => !n.read)?.length || 0;
 
     // Sidebar State
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -56,10 +62,37 @@ export default function MainLayout({ children }) {
                             gap: '12px',
                             marginBottom: '16px',
                             paddingBottom: '16px',
-                            borderBottom: '1px solid var(--border)'
+                            borderBottom: '1px solid var(--border)',
+                            justifyContent: 'space-between'
                         }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <button
+                                    onClick={() => setMobileMenuOpen(true)}
+                                    style={{
+                                        width: '44px',
+                                        height: '44px',
+                                        background: 'var(--bg-card)',
+                                        border: '1px solid var(--border)',
+                                        borderRadius: '12px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        cursor: 'pointer',
+                                        color: 'var(--text-primary)'
+                                    }}
+                                >
+                                    <Menu size={22} />
+                                </button>
+                                <span style={{
+                                    fontSize: '1.2rem',
+                                    fontWeight: '700',
+                                    color: 'var(--text-primary)'
+                                }}>
+                                    Dindin
+                                </span>
+                            </div>
                             <button
-                                onClick={() => setMobileMenuOpen(true)}
+                                onClick={() => navigate('/account')}
                                 style={{
                                     width: '44px',
                                     height: '44px',
@@ -70,18 +103,31 @@ export default function MainLayout({ children }) {
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     cursor: 'pointer',
-                                    color: 'var(--text-primary)'
+                                    color: 'var(--text-primary)',
+                                    position: 'relative'
                                 }}
                             >
-                                <Menu size={22} />
+                                <Bell size={20} />
+                                {unreadCount > 0 && (
+                                    <span style={{
+                                        position: 'absolute',
+                                        top: '6px',
+                                        right: '6px',
+                                        width: '16px',
+                                        height: '16px',
+                                        background: 'var(--danger)',
+                                        borderRadius: '50%',
+                                        color: '#fff',
+                                        fontSize: '0.65rem',
+                                        fontWeight: '700',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}>
+                                        {unreadCount > 9 ? '9+' : unreadCount}
+                                    </span>
+                                )}
                             </button>
-                            <span style={{
-                                fontSize: '1.2rem',
-                                fontWeight: '700',
-                                color: 'var(--text-primary)'
-                            }}>
-                                Dindin
-                            </span>
                         </div>
                     )}
 

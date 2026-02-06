@@ -10,7 +10,8 @@ import {
     Coins,
     ChevronLeft,
     ChevronRight,
-    X
+    X,
+    User
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -191,9 +192,29 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
                     })}
                 </nav>
 
-                {/* Footer */}
-                <div style={{ padding: '24px' }}>
-                    {/* Optional footer content */}
+                {/* Footer - Mobile Account Link */}
+                <div style={{ padding: '16px' }}>
+                    {isMobile && (
+                        <NavLink
+                            to="/account"
+                            style={{ textDecoration: 'none' }}
+                        >
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '12px',
+                                padding: '12px 16px',
+                                borderRadius: '14px',
+                                color: location.pathname === '/account' ? '#FFFFFF' : 'var(--text-secondary)',
+                                background: location.pathname === '/account' ? 'var(--primary)' : 'var(--bg-secondary)',
+                                transition: 'all 0.2s ease',
+                                height: '48px'
+                            }}>
+                                <User size={20} />
+                                <span style={{ fontWeight: '500', fontSize: '0.95rem' }}>Minha Conta</span>
+                            </div>
+                        </NavLink>
+                    )}
                 </div>
             </aside>
         </>

@@ -4,10 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, X, CreditCard, Calendar, Trash2, Edit2, Wifi, Check, ChevronDown } from 'lucide-react';
 import { validateName, validateDayOfMonth, validateAll, errorContainerStyle, getErrorMessageStyle } from '../../utils/validation';
 import NewCardModal from './NewCardModal';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function CardsView() {
     const navigate = useNavigate();
     const { cards, addCard, removeCard, updateCard } = useCards();
+    const isMobile = useIsMobile();
 
     // Expanded Colors Palette
     const colors = [
@@ -65,12 +67,19 @@ export default function CardsView() {
         <div className="animate-fade-in" style={{ marginTop: '24px', paddingBottom: '40px' }}>
 
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+            <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: isMobile ? '24px' : '32px',
+                flexWrap: 'wrap',
+                gap: '12px'
+            }}>
                 <div>
-                    <h1 style={{ fontSize: '1.8rem', fontWeight: '800', letterSpacing: '-1px', color: 'var(--text-primary)' }}>
+                    <h1 style={{ fontSize: isMobile ? '1.4rem' : '1.8rem', fontWeight: '800', letterSpacing: '-1px', color: 'var(--text-primary)' }}>
                         Meus Cartões
                     </h1>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: isMobile ? '0.85rem' : '0.95rem' }}>
                         Gerencie seus limites e datas de fatura
                     </p>
                 </div>
@@ -78,12 +87,15 @@ export default function CardsView() {
                     onClick={() => openModal()}
                     style={{
                         background: 'var(--text-primary)', color: '#fff',
-                        border: 'none', padding: '12px 24px', borderRadius: '30px',
+                        border: 'none',
+                        padding: isMobile ? '10px 16px' : '12px 24px',
+                        borderRadius: '30px',
                         fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px',
-                        cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+                        cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                        fontSize: isMobile ? '0.85rem' : '1rem'
                     }}
                 >
-                    <Plus size={20} /> Novo Cartão
+                    <Plus size={isMobile ? 18 : 20} /> {isMobile ? 'Novo' : 'Novo Cartão'}
                 </button>
             </div>
 
@@ -98,7 +110,7 @@ export default function CardsView() {
                 </div>
             ) : (
                 /* Cards Grid */
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '24px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(320px, 1fr))', gap: isMobile ? '20px' : '24px' }}>
                     {cards.map((card) => (
                         <div key={card.id} className="card-hover" style={{ position: 'relative', perspective: '1000px' }}>
                             {/* Visual Card */}
@@ -150,28 +162,52 @@ export default function CardsView() {
                             </div>
 
                             {/* Action Buttons (Below Card) */}
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px', paddingRight: '8px' }}>
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: isMobile ? 'center' : 'flex-end',
+                                gap: isMobile ? '12px' : '8px',
+                                marginTop: '12px',
+                                paddingRight: isMobile ? '0' : '8px'
+                            }}>
                                 <button
                                     onClick={() => openModal(card)}
                                     style={{
-                                        padding: '8px 16px', borderRadius: '20px',
-                                        border: '1px solid var(--border)', background: '#fff',
-                                        fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-primary)',
-                                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
+                                        padding: isMobile ? '12px 20px' : '8px 16px',
+                                        borderRadius: '20px',
+                                        border: '1px solid var(--border)',
+                                        background: '#fff',
+                                        fontSize: isMobile ? '0.9rem' : '0.8rem',
+                                        fontWeight: '600',
+                                        color: 'var(--text-primary)',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        minHeight: isMobile ? '44px' : 'auto',
+                                        flex: isMobile ? 1 : 'none'
                                     }}
                                 >
-                                    <Edit2 size={14} /> Editar
+                                    <Edit2 size={isMobile ? 16 : 14} /> Editar
                                 </button>
                                 <button
                                     onClick={() => { if (window.confirm('Excluir cartão?')) removeCard(card.id) }}
                                     style={{
-                                        padding: '8px 16px', borderRadius: '20px',
-                                        border: '1px solid rgba(255,59,48,0.2)', background: 'rgba(255,59,48,0.05)',
-                                        fontSize: '0.8rem', fontWeight: '600', color: 'var(--danger)',
-                                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
+                                        padding: isMobile ? '12px 20px' : '8px 16px',
+                                        borderRadius: '20px',
+                                        border: '1px solid rgba(255,59,48,0.2)',
+                                        background: 'rgba(255,59,48,0.05)',
+                                        fontSize: isMobile ? '0.9rem' : '0.8rem',
+                                        fontWeight: '600',
+                                        color: 'var(--danger)',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        minHeight: isMobile ? '44px' : 'auto',
+                                        flex: isMobile ? 1 : 'none'
                                     }}
                                 >
-                                    <Trash2 size={14} />
+                                    <Trash2 size={isMobile ? 16 : 14} /> {isMobile ? 'Excluir' : ''}
                                 </button>
                             </div>
                         </div>

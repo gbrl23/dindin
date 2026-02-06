@@ -328,12 +328,15 @@ export default function NewTransactionModal({ onClose, onSuccess, initialType = 
         }
     };
 
+    // Check mobile
+    const isMobileModal = typeof window !== 'undefined' && window.innerWidth <= 480;
+
     return (
         <div style={{
             position: 'fixed', inset: 0, zIndex: 1000,
             background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '20px'
+            display: 'flex', alignItems: isMobileModal ? 'flex-end' : 'center', justifyContent: 'center',
+            padding: isMobileModal ? '0' : '20px'
         }}>
             <style>{`
                 .custom-scroll::-webkit-scrollbar { width: 6px; }
@@ -342,42 +345,41 @@ export default function NewTransactionModal({ onClose, onSuccess, initialType = 
                 .custom-scroll::-webkit-scrollbar-thumb:hover { background: #D1D1D6; }
             `}</style>
 
-            <div style={{ position: 'relative', width: '100%', maxWidth: '480px' }}>
-
-                {/* Close Button - OUTSIDE */}
-                <button
-                    onClick={onClose}
-                    style={{
-                        position: 'absolute',
-                        right: '0',
-                        top: '-44px',
-                        background: 'transparent',
-                        border: 'none',
-                        cursor: 'pointer',
-                        color: '#FFF',
-                        display: 'flex', alignItems: 'center', gap: '8px',
-                        padding: '8px',
-                        zIndex: 20
-                    }}
-                >
-                    <span style={{ fontSize: '0.9rem', fontWeight: '600' }}>Fechar</span>
-                    <div style={{ background: 'rgba(255,255,255,0.2)', padding: '4px', borderRadius: '50%', display: 'flex' }}>
-                        <X size={20} />
-                    </div>
-                </button>
+            <div style={{ position: 'relative', width: '100%', maxWidth: isMobileModal ? '100%' : '480px' }}>
 
                 {/* Card */}
                 <div className="card animate-fade-in custom-scroll" style={{
                     width: '100%',
                     background: 'var(--bg-card)',
                     boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
-                    borderRadius: '24px',
-                    padding: '32px',
+                    borderRadius: isMobileModal ? '24px 24px 0 0' : '24px',
+                    padding: isMobileModal ? '20px 16px 32px' : '32px',
                     position: 'relative',
-                    maxHeight: '85vh',
+                    maxHeight: isMobileModal ? '90vh' : '85vh',
                     overflowY: 'auto'
                 }}>
-                    <h2 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '24px', textAlign: 'center' }}>Nova Movimentação</h2>
+                    {/* Close Button - Inside Modal */}
+                    <button
+                        onClick={onClose}
+                        style={{
+                            position: 'absolute',
+                            right: '16px',
+                            top: '16px',
+                            background: 'var(--bg-secondary)',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: 'var(--text-secondary)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '50%',
+                            zIndex: 20
+                        }}
+                    >
+                        <X size={20} />
+                    </button>
+
+                    <h2 style={{ fontSize: isMobileModal ? '1.1rem' : '1.25rem', fontWeight: '700', marginBottom: '24px', textAlign: 'center', paddingRight: '40px' }}>Nova Movimentação</h2>
 
                     {/* Segmented Control */}
                     <div style={{
@@ -427,9 +429,10 @@ export default function NewTransactionModal({ onClose, onSuccess, initialType = 
                                 border: touched.amount && errors.amount ? '2px solid #FF3B30' : '2px solid transparent',
                                 background: touched.amount && errors.amount ? 'rgba(255, 59, 48, 0.05)' : 'transparent'
                             }}>
-                                <span style={{ fontSize: '2rem', fontWeight: '600', color: getThemeColor(), lineHeight: 1 }}>R$</span>
+                                <span style={{ fontSize: isMobileModal ? '1.5rem' : '2rem', fontWeight: '600', color: getThemeColor(), lineHeight: 1 }}>R$</span>
                                 <input
                                     type="text"
+                                    inputMode="decimal"
                                     value={amount}
                                     onChange={(e) => {
                                         setAmount(e.target.value.replace(/[^0-9.,]/g, ''));
@@ -439,9 +442,9 @@ export default function NewTransactionModal({ onClose, onSuccess, initialType = 
                                     placeholder="0,00"
                                     autoFocus
                                     style={{
-                                        fontSize: '2.5rem', fontWeight: '700',
+                                        fontSize: isMobileModal ? '2rem' : '2.5rem', fontWeight: '700',
                                         border: 'none', background: 'transparent',
-                                        width: '180px',
+                                        width: isMobileModal ? '140px' : '180px',
                                         textAlign: 'center',
                                         color: 'var(--text-primary)',
                                         outline: 'none',

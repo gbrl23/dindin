@@ -138,7 +138,7 @@ export default function MainLayout({ children }) {
                     {/* Mobile Quick Add Button */}
                     {isMobile && location.pathname !== '/account' && (
                         <button
-                            onClick={() => navigate('/transactions/add?type=expense')}
+                            onClick={() => navigate('/add-transaction?type=expense')}
                             style={{
                                 position: 'fixed',
                                 bottom: '24px',

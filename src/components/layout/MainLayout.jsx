@@ -12,7 +12,10 @@ import { useGroups } from '../../hooks/useGroups';
 export default function MainLayout({ children }) {
     const location = useLocation();
     const navigate = useNavigate();
-    const { isTransactionModalOpen, closeTransactionModal, openTransactionModal, modalType } = useDashboard();
+    const {
+        isTransactionModalOpen, closeTransactionModal, openTransactionModal, modalType,
+        selectedDate, handlePrevMonth, handleNextMonth
+    } = useDashboard();
     const { notifications } = useNotifications();
     const { acceptInvite } = useGroups();
 
@@ -32,6 +35,16 @@ export default function MainLayout({ children }) {
         window.addEventListener('resize', checkMobile);
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
+
+    // Scroll Lock when mobile menu is open
+    useEffect(() => {
+        if (mobileMenuOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+        return () => { document.body.style.overflow = 'unset'; };
+    }, [mobileMenuOpen]);
 
     // Don't show sidebar on login/signup pages
     const isAuthPage = ['/login', '/signup', '/register'].includes(location.pathname);
@@ -103,6 +116,34 @@ export default function MainLayout({ children }) {
                                     </span>
                                 </div>
                             </div>
+
+                            {/* Mobile Month Navigation */}
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                background: 'var(--bg-secondary)',
+                                padding: '4px 8px',
+                                borderRadius: '12px',
+                                border: '1px solid var(--border)'
+                            }}>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handlePrevMonth(); }}
+                                    style={{ background: 'transparent', border: 'none', padding: '4px', display: 'flex', alignItems: 'center', color: 'var(--text-secondary)' }}
+                                >
+                                    <ChevronLeft size={18} />
+                                </button>
+                                <span style={{ fontSize: '0.85rem', fontWeight: '700', textTransform: 'capitalize', minWidth: '80px', textAlign: 'center' }}>
+                                    {selectedDate.toLocaleString('pt-BR', { month: 'short' })}
+                                </span>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handleNextMonth(); }}
+                                    style={{ background: 'transparent', border: 'none', padding: '4px', display: 'flex', alignItems: 'center', color: 'var(--text-secondary)' }}
+                                >
+                                    <ChevronRight size={18} />
+                                </button>
+                            </div>
+
                             <div style={{ position: 'relative' }}>
                                 <button
                                     onClick={() => setShowNotifications(!showNotifications)}

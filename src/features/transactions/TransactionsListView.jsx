@@ -8,6 +8,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Trash2, Search, Calendar, Plus, CreditCard, Edit2, ChevronLeft, ChevronRight, FileText, CheckCircle, Clock, Check, Layers, Filter, Tag, ArrowUp, ArrowDown, TrendingUp } from 'lucide-react';
 import ImportInvoiceModal from './ImportInvoiceModal';
 import SeriesActionModal from '../../components/SeriesActionModal';
+import { useDashboard } from '../../contexts/DashboardContext';
 import { parseLocalDate, displayDateShort } from '../../utils/dateUtils';
 import {
     SwipeableList,
@@ -22,7 +23,14 @@ import 'react-swipeable-list/dist/styles.css';
 export default function TransactionsListView() {
     const navigate = useNavigate();
     const isMobile = useIsMobile();
-    const { transactions, removeTransaction, updateTransaction, fetchTransactions, removeTransactionSeries } = useTransactions();
+    const {
+        transactions, removeTransaction, updateTransaction, fetchTransactions, removeTransactionSeries
+    } = useTransactions();
+    const {
+        selectedDate: currentDate,
+        handlePrevMonth: prevMonth,
+        handleNextMonth: nextMonth
+    } = useDashboard();
     const { user } = useAuth();
     const { profiles } = useProfiles();
     const { categories } = useCategories();
@@ -31,15 +39,6 @@ export default function TransactionsListView() {
     const location = useLocation();
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('');
-    const [currentDate, setCurrentDate] = useState(() => {
-        if (location.state?.initialMonth !== undefined && location.state?.initialYear !== undefined) {
-            const date = new Date();
-            date.setFullYear(location.state.initialYear);
-            date.setMonth(location.state.initialMonth);
-            return date;
-        }
-        return new Date();
-    });
     const [showImportModal, setShowImportModal] = useState(false);
 
     // Delete Modal State
@@ -76,22 +75,6 @@ export default function TransactionsListView() {
         fetchTransactions();
     }, [fetchTransactions]);
 
-    // Navigation Handlers
-    const prevMonth = () => {
-        setCurrentDate(prev => {
-            const newDate = new Date(prev);
-            newDate.setMonth(prev.getMonth() - 1);
-            return newDate;
-        });
-    };
-
-    const nextMonth = () => {
-        setCurrentDate(prev => {
-            const newDate = new Date(prev);
-            newDate.setMonth(prev.getMonth() + 1);
-            return newDate;
-        });
-    };
 
     const currentMonthLabel = currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
     const currentMonthKey = currentDate.toLocaleString('pt-BR', { month: '2-digit', year: 'numeric' }); // MM/AAAA comparison helper? Or simple Month check.

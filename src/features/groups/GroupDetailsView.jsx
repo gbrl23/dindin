@@ -385,7 +385,7 @@ export default function GroupDetailsView() {
                                 style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover' }}
                             />
                             <span style={{ fontSize: '0.85rem', fontWeight: '600', textAlign: 'center' }}>
-                                {m.full_name.split(' ')[0]}
+                                {m.full_name?.split(' ')[0] || '...'}
                             </span>
                             {m.role === 'owner' && (
                                 <span style={{
@@ -487,11 +487,11 @@ export default function GroupDetailsView() {
                             }}
                         >
                             <img
-                                src={m.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.full_name)}&background=random&size=20`}
+                                src={m.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.full_name || 'U')}&background=random&size=20`}
                                 alt=""
                                 style={{ width: '20px', height: '20px', borderRadius: '50%' }}
                             />
-                            {m.full_name.split(' ')[0]}
+                            {m.full_name?.split(' ')[0] || '...'}
                         </button>
                     );
                 })}

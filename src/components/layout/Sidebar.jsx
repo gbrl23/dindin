@@ -97,7 +97,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
                 className={isMobile ? '' : 'hide-mobile'}
                 style={{
                     width: isMobile ? '280px' : (isCollapsed ? '80px' : '260px'),
-                    height: '100vh',
+                    height: isMobile ? '100dvh' : '100vh',
                     position: 'fixed',
                     left: isMobile ? (mobileOpen ? '0' : '-300px') : 0,
                     top: 0,
@@ -208,7 +208,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
                     {renderIndices(navItems)}
 
                     {/* Bottom Navigation pushed to end */}
-                    <div style={{ marginTop: 'auto', paddingTop: '16px' }}>
+                    <div style={{ marginTop: 'auto', paddingTop: '16px', paddingBottom: isMobile ? '32px' : '0' }}>
                         {/* Divider */}
                         <div style={{
                             height: '1px',

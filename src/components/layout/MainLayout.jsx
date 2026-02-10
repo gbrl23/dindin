@@ -5,7 +5,7 @@ import NotificationsDropdown from './NotificationsDropdown';
 import NewTransactionModal from '../../features/transactions/NewTransactionModal';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useDashboard } from '../../contexts/DashboardContext';
-import { Menu, Bell, X, Coins } from 'lucide-react';
+import { Menu, Bell, X, Coins, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNotifications } from '../../hooks/useNotifications';
 import { useGroups } from '../../hooks/useGroups';
 

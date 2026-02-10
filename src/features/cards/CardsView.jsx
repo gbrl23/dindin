@@ -5,6 +5,7 @@ import { Plus, X, CreditCard, Calendar, Trash2, Edit2, Wifi, Check, ChevronDown 
 import { validateName, validateDayOfMonth, validateAll, errorContainerStyle, getErrorMessageStyle } from '../../utils/validation';
 import NewCardModal from './NewCardModal';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import DindinTip from '../../components/common/DindinTip';
 
 export default function CardsView() {
     const navigate = useNavigate();
@@ -98,6 +99,8 @@ export default function CardsView() {
                     <Plus size={isMobile ? 18 : 20} /> {isMobile ? 'Novo' : 'Novo Cartão'}
                 </button>
             </div>
+
+            <DindinTip category="cards" style={{ marginBottom: '32px' }} />
 
             {/* Empty State */}
             {cards.length === 0 ? (

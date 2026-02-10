@@ -8,6 +8,7 @@ import { Trash2, Search, Calendar, Filter, Plus, Edit2, TrendingUp, PiggyBank, T
 import GoalsSection from './GoalsSection';
 import AddGoalModal from './AddGoalModal';
 import GoalDetailModal from './GoalDetailModal';
+import DindinTip from '../../components/common/DindinTip';
 
 export default function InvestmentsView() {
     const navigate = useNavigate();
@@ -99,6 +100,8 @@ export default function InvestmentsView() {
                     +R$ {filteredTransactions.length > 0 ? filteredTransactions[0].amount.toLocaleString('pt-BR') : '0,00'} este mês
                 </div>
             </div>
+
+            <DindinTip category="investments" style={{ marginBottom: '32px' }} />
 
             {/* Goals Section */}
             <GoalsSection

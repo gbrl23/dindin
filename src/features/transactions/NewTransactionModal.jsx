@@ -644,6 +644,27 @@ export default function NewTransactionModal({ onClose, onSuccess, initialType = 
                                                 </button>
                                             </div>
 
+                                            {splitMode === 'custom' && (
+                                                <div style={{
+                                                    marginBottom: '12px',
+                                                    padding: '8px 12px',
+                                                    background: 'var(--bg-secondary)',
+                                                    borderRadius: '10px',
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    fontSize: '0.8rem'
+                                                }}>
+                                                    <span style={{ color: 'var(--text-secondary)' }}>Restante:</span>
+                                                    <span style={{
+                                                        fontWeight: '700',
+                                                        color: (parseFloat(amount.replace(',', '.')) || 0) - Object.values(customShares).reduce((acc, v) => acc + (parseFloat(v.replace(',', '.')) || 0), 0) === 0 ? 'var(--success)' : 'var(--danger)'
+                                                    }}>
+                                                        R$ {((parseFloat(amount.replace(',', '.')) || 0) - Object.values(customShares).reduce((acc, v) => acc + (parseFloat(v.replace(',', '.')) || 0), 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                    </span>
+                                                </div>
+                                            )}
+
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto', paddingRight: '4px' }}>
                                                 {isLoadingMembers ? (
                                                     <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>

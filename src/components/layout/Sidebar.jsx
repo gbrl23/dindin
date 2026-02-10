@@ -12,7 +12,8 @@ import {
     ChevronRight,
     X,
     User,
-    Calendar
+    Calendar,
+    Zap
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -35,6 +36,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
         { path: '/calendar', icon: <Calendar size={20} />, label: 'Calendário' },
         { path: '/cards', icon: <CreditCard size={20} />, label: 'Cartões' },
         { path: '/bills', icon: <FileText size={20} />, label: 'Contas' },
+        { path: '/subscriptions', icon: <Zap size={20} />, label: 'Assinaturas' },
         { path: '/investments', icon: <TrendingUp size={20} />, label: 'Investimentos' },
         { path: '/groups', icon: <Users size={20} />, label: 'Grupos' },
         { path: '/profiles', icon: <User size={20} />, label: 'Perfis' },
@@ -197,7 +199,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
                 </div>
 
                 {/* Main Navigation */}
-                <nav style={{ flex: 1, padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto' }}>
+                <nav style={{ flex: 1, padding: '0 16px 20px 16px', display: 'flex', flexDirection: 'column', gap: '4px', overflowY: 'auto' }}>
                     {renderIndices(navItems)}
 
                     {/* Spacer to push bottom items down */}

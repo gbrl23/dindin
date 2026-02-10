@@ -22,6 +22,7 @@ import CumulativeLineChart from '../../components/CumulativeLineChart';
 import IncomeModal from './IncomeModal';
 import { parseLocalDate, displayDate } from '../../utils/dateUtils';
 import { useBalanceCalculator } from '../../hooks/useBalanceCalculator';
+import DindinTip from '../../components/common/DindinTip';
 
 export default function DashboardView() {
     const navigate = useNavigate();
@@ -59,47 +60,92 @@ export default function DashboardView() {
     const selectedMonth = selectedDate.getMonth();
     const selectedYear = selectedDate.getFullYear();
 
-    const isSelectedMonth = (tx) => {
-        // Priority: Invoice Date (Card) > Competence Date > Transaction Date
-        let dateToUse = tx.date;
-        if (tx.type === 'expense' && tx.card_id && tx.invoice_date) {
-            dateToUse = tx.invoice_date;
-        } else if (tx.competence_date) {
-            dateToUse = tx.competence_date;
+    // --- CALCULATIONS (Optimized with useMemo) ---
+    const { monthlyTransactions, totalIncome, balance, myExpenses, totalAReceber, totalAPagar, netBalance, burnRate } = useMemo(() => {
+        const today = new Date();
+        const isCurrentMonth = today.getMonth() === selectedMonth && today.getFullYear() === selectedYear;
+
+        const isSelectedMonth = (tx) => {
+            let dateToUse = tx.date;
+            if (tx.type === 'expense' && tx.card_id && tx.invoice_date) {
+                dateToUse = tx.invoice_date;
+            } else if (tx.competence_date) {
+                dateToUse = tx.competence_date;
+            }
+            const d = parseLocalDate(dateToUse);
+            return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
+        };
+
+        const currentMonthTxs = transactions.filter(t => isSelectedMonth(t));
+
+        const totalIncome = currentMonthTxs
+            .filter(t => t.type === 'income')
+            .reduce((acc, t) => acc + t.amount, 0);
+
+        // Calculate split balances
+        // Note: Assuming useBalanceCalculator results are derived here manually or via logic to stay inside useMemo
+        // For simplicity, I'll calculate myExpenses directly based on myProfile and currentMonthTxs
+        const myExpensesTotal = currentMonthTxs
+            .filter(t => t.type === 'expense' || t.type === 'investment')
+            .reduce((acc, t) => {
+                if (!t.share_type || t.share_type === 'equal') {
+                    // This is simplified, in a real app we'd use the logic from useBalanceCalculator
+                    // But since we want it inside useMemo for performance, we re-evaluate
+                    const myId = myProfile?.id;
+                    const participants = t.participants || [];
+                    if (participants.length === 0 || participants.includes(myId) || t.user_id === user?.id) {
+                        const shareCount = participants.length || 1;
+                        return acc + (t.amount / shareCount);
+                    }
+                }
+                return acc;
+            }, 0);
+
+        const balance = ((parseFloat(monthlyIncome) || 0) + totalIncome) - myExpensesTotal;
+
+        // Burn Rate logic: total expenses divided by passed days
+        let daysPassed = 1;
+        if (isCurrentMonth) {
+            daysPassed = today.getDate();
+        } else {
+            daysPassed = new Date(selectedYear, selectedMonth + 1, 0).getDate();
         }
+        const dailyBurn = myExpensesTotal / daysPassed;
 
-        const d = parseLocalDate(dateToUse);
-        return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
-    };
+        return {
+            monthlyTransactions: currentMonthTxs,
+            totalIncome,
+            balance,
+            myExpenses: myExpensesTotal,
+            burnRate: dailyBurn,
+            // These would come from hook, keep them for now
+            totalAReceber: 0, // Placeholder as hook is complex
+            totalAPagar: 0,
+            netBalance: 0
+        };
+    }, [transactions, selectedDate, monthlyIncome, myProfile, user?.id]);
 
-    const monthlyTransactions = transactions.filter(t => isSelectedMonth(t));
-
-    // Totals (Income only - expenses calculated by hook)
-    const totalIncome = monthlyTransactions
-        .filter(t => t.type === 'income')
-        .reduce((acc, t) => acc + t.amount, 0);
-
-    // --- Balance Calculator (Divisões) ---
-    // myExpenses = apenas minha parte das despesas (considera divisões)
-    const { myExpenses, totalAReceber, totalAPagar, netBalance } = useBalanceCalculator(
+    // Keep the hook for the complex arithmetic of shares until we refactor it fully into useMemo
+    const balanceDetails = useBalanceCalculator(
         transactions,
         myProfile?.id,
         selectedDate
     );
 
-    // Saldo Líquido = Salário + Receitas - Minha Parte das Despesas
-    // Nota: netBalance (A Receber - A Pagar) NÃO entra aqui porque:
-    // - Se eu paguei R$50 e tenho R$25 a receber → myExpenses já é R$25 (minha parte)
-    // - O A Receber é informativo, não afeta o saldo diretamente
-    const balance = ((parseFloat(monthlyIncome) || 0) + totalIncome) - myExpenses;
+    // Patching the placeholder values with actual hook results
+    const finalTotalAReceber = balanceDetails.totalAReceber;
+    const finalTotalAPagar = balanceDetails.totalAPagar;
+    const finalNetBalance = balanceDetails.netBalance;
+    const finalMyExpenses = balanceDetails.myExpenses;
+    const finalBalance = ((parseFloat(monthlyIncome) || 0) + totalIncome) - finalMyExpenses;
+    const finalBurnRate = finalMyExpenses / (selectedDate.getMonth() === new Date().getMonth() ? new Date().getDate() : new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).getDate());
 
-    const cardInvoices = cards.map(c => {
-        const cardTotal = transactions
+    const cardInvoices = useMemo(() => cards.map(c => {
+        const cardTotal = monthlyTransactions
             .filter(t => t.card_id === c.id && t.type === 'expense')
-            .filter(t => isSelectedMonth(t))
             .reduce((acc, t) => acc + t.amount, 0);
         return { ...c, total: cardTotal };
-    });
+    }), [cards, monthlyTransactions]);
 
     // Chart Data Preparation (CUMULATIVE)
     const { incomeData, expenseData, labels } = useMemo(() => {
@@ -188,7 +234,7 @@ export default function DashboardView() {
                                 <Edit2 size={16} color="var(--text-tertiary)" />
                             </div>
                             <span style={{ fontSize: isMobile ? '1.5rem' : '2rem', fontWeight: '700', color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>
-                                R$ {balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                R$ {finalBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                             </span>
                             {monthlyIncome > 0 && (
                                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
@@ -211,7 +257,7 @@ export default function DashboardView() {
                         </div>
 
                         {/* Expenses - Minha Parte */}
-                        <div className="card" style={{ padding: isMobile ? '16px' : '24px', display: 'flex', flexDirection: 'column', gap: isMobile ? '8px' : '12px', borderLeft: '4px solid var(--danger)' }}>
+                        <div className="card" style={{ padding: isMobile ? '16px' : '24px', display: 'flex', flexDirection: 'column', gap: isMobile ? '4px' : '8px', borderLeft: '4px solid var(--danger)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 <div style={{ padding: '10px', borderRadius: '50%', background: 'rgba(255, 59, 48, 0.1)', color: 'var(--danger)' }}>
                                     <ArrowDown size={20} />
@@ -219,8 +265,22 @@ export default function DashboardView() {
                                 <span style={{ color: 'var(--text-secondary)', fontWeight: '600', fontSize: '0.9rem' }}>Minhas Despesas</span>
                             </div>
                             <span style={{ fontSize: isMobile ? '1.5rem' : '2rem', fontWeight: '700', color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>
-                                R$ {myExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                R$ {finalMyExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                             </span>
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                fontSize: '0.75rem',
+                                color: 'var(--text-secondary)',
+                                background: 'var(--bg-secondary)',
+                                padding: '4px 10px',
+                                borderRadius: '12px',
+                                width: 'fit-content'
+                            }}>
+                                <TrendingUp size={12} />
+                                <span>Média de <strong>R$ {finalBurnRate.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}/dia</strong></span>
+                            </div>
                         </div>
                     </div>
 
@@ -230,21 +290,21 @@ export default function DashboardView() {
                         const views = [
                             {
                                 title: 'Balanço das Divisões',
-                                value: netBalance,
-                                color: netBalance >= 0 ? 'var(--success)' : 'var(--warning)',
-                                prefix: netBalance >= 0 ? '+' : '',
-                                subtitle: netBalance >= 0 ? 'Você ganha com as divisões' : 'Você deve das divisões'
+                                value: finalNetBalance,
+                                color: finalNetBalance >= 0 ? 'var(--success)' : 'var(--warning)',
+                                prefix: finalNetBalance >= 0 ? '+' : '',
+                                subtitle: finalNetBalance >= 0 ? 'Você ganha com as divisões' : 'Você deve das divisões'
                             },
                             {
                                 title: 'A Receber',
-                                value: totalAReceber,
+                                value: finalTotalAReceber,
                                 color: 'var(--success)',
                                 prefix: '+',
                                 subtitle: 'De despesas que você pagou'
                             },
                             {
                                 title: 'A Transferir',
-                                value: totalAPagar,
+                                value: finalTotalAPagar,
                                 color: 'var(--warning)',
                                 prefix: '-',
                                 subtitle: 'Para quem pagou por você'
@@ -530,9 +590,10 @@ export default function DashboardView() {
                             <div style={{ width: 48, height: 48, background: 'rgba(52, 199, 89, 0.1)', borderRadius: '50%', color: 'var(--success)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto' }}>
                                 <CheckCircle size={24} />
                             </div>
-                            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Nada pendente</p>
                         </div>
                     </div>
+
+                    <DindinTip category="general" />
                 </div>
             </div>{/* End Main Grid */}
 

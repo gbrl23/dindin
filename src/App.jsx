@@ -18,6 +18,7 @@ import GroupDetailsView from './features/groups/GroupDetailsView';
 import AccountView from './features/account/AccountView';
 import CalendarView from './features/calendar/CalendarView';
 import LandingPage from './pages/LandingPage';
+import SubscriptionsView from './features/subscriptions/SubscriptionsView';
 
 import MainLayout from './components/layout/MainLayout';
 
@@ -48,6 +49,7 @@ function App() {
             <Route path="/transactions" element={<ProtectedRoute><MainLayout><TransactionsView /></MainLayout></ProtectedRoute>} />
             <Route path="/investments" element={<ProtectedRoute><MainLayout><InvestmentsView /></MainLayout></ProtectedRoute>} />
             <Route path="/calendar" element={<ProtectedRoute><MainLayout><CalendarView /></MainLayout></ProtectedRoute>} />
+            <Route path="/subscriptions" element={<ProtectedRoute><MainLayout><SubscriptionsView /></MainLayout></ProtectedRoute>} />
             <Route path="/edit-transaction/:id" element={<ProtectedRoute><MainLayout><AddTransactionView /></MainLayout></ProtectedRoute>} />
             <Route path="/account" element={<ProtectedRoute><MainLayout><AccountView /></MainLayout></ProtectedRoute>} />
 

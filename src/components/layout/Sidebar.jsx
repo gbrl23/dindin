@@ -37,6 +37,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
         { path: '/bills', icon: <FileText size={20} />, label: 'Contas' },
         { path: '/investments', icon: <TrendingUp size={20} />, label: 'Investimentos' },
         { path: '/groups', icon: <Users size={20} />, label: 'Grupos' },
+        { path: '/profiles', icon: <User size={20} />, label: 'Perfis' },
     ];
 
     const bottomNavItems = [

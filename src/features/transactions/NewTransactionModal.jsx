@@ -12,7 +12,7 @@ import NewCardModal from '../cards/NewCardModal';
 
 export default function NewTransactionModal({ onClose, onSuccess, initialType = 'expense' }) {
     const { user } = useAuth();
-    const { profiles } = useProfiles();
+    const { profiles, addProfile } = useProfiles();
     const { cards } = useCards();
     const { groups, getGroupMembers } = useGroups();
     const { addTransactionsBulk } = useTransactions();
@@ -84,9 +84,12 @@ export default function NewTransactionModal({ onClose, onSuccess, initialType = 
 
     // Group Logic
     const [groupMembers, setGroupMembers] = useState([]);
+    const [isLoadingMembers, setIsLoadingMembers] = useState(false);
     const [selectedProfiles, setSelectedProfiles] = useState([]);
     const [splitMode, setSplitMode] = useState('equal'); // 'equal' | 'custom'
     const [customShares, setCustomShares] = useState({}); // { [profileId]: string }
+    const [participantSearch, setParticipantSearch] = useState('');
+    const [isSearchingExternal, setIsSearchingExternal] = useState(false);
 
     // Init Logic
     useEffect(() => {
@@ -110,18 +113,30 @@ export default function NewTransactionModal({ onClose, onSuccess, initialType = 
     // Load Group Members when Group Selected
     useEffect(() => {
         if (selectedGroupId) {
-            getGroupMembers(selectedGroupId).then(members => {
-                console.log("Fetched Members:", members); // Debug
-                setGroupMembers(members);
-                // Default: All selected
-                setSelectedProfiles(members.map(m => ({ ...m, isSelected: true })));
-                // Default Payer: Me
-                const meInGroup = members.find(m => m.user_id === user.id);
-                if (meInGroup) setPayerId(meInGroup.id);
-                else if (members.length > 0) setPayerId(members[0].id);
-            });
+            setIsLoadingMembers(true);
+            getGroupMembers(selectedGroupId)
+                .then(members => {
+                    console.log("Fetched Members:", members); // Debug
+                    setGroupMembers(members);
+                    // Default: All selected
+                    setSelectedProfiles(members.map(m => ({ ...m, isSelected: true })));
+
+                    // Default Payer: Me
+                    const meInGroup = members.find(m => m.user_id === user?.id);
+                    if (meInGroup) setPayerId(meInGroup.id);
+                    else if (members.length > 0) setPayerId(members[0].id);
+                })
+                .catch(err => {
+                    console.error("Error loading group members:", err);
+                    setGroupMembers([]);
+                })
+                .finally(() => setIsLoadingMembers(false));
+        } else {
+            setGroupMembers([]);
+            setSelectedProfiles([]);
+            setIsLoadingMembers(false);
         }
-    }, [selectedGroupId]);
+    }, [selectedGroupId, user?.id]);
 
     const getThemeColor = (t = type) => {
         switch (t) {
@@ -597,8 +612,8 @@ export default function NewTransactionModal({ onClose, onSuccess, initialType = 
                                                     onChange={e => setPayerId(e.target.value)}
                                                     style={{ width: '100%', background: 'transparent', border: 'none', fontSize: '0.9rem', outline: 'none' }}
                                                 >
-                                                    {groupMembers.map(m => (
-                                                        <option key={m.id} value={m.id}>{m.full_name || m.email || 'Membro sem nome'} {m.user_id === user.id ? '(Eu)' : ''}</option>
+                                                    {selectedProfiles.map(m => (
+                                                        <option key={m.id} value={m.id}>{m.full_name || m.email || 'Membro sem nome'} {m.user_id === user?.id ? '(Eu)' : ''}</option>
                                                     ))}
                                                 </select>
                                             </div>
@@ -606,8 +621,8 @@ export default function NewTransactionModal({ onClose, onSuccess, initialType = 
                                         <div>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                                                 <label style={{ fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>Participantes</label>
-                                                <button type="button" onClick={() => setSelectedProfiles(prev => prev.map(p => ({ ...p, isSelected: !prev.every(x => x.isSelected) })))} style={{ fontSize: '0.75rem', color: 'var(--primary)', border: 'none', background: 'transparent', cursor: 'pointer', fontWeight: '600' }}>
-                                                    {selectedProfiles.every(p => p.isSelected) ? 'Desmarcar todos' : 'Marcar todos'}
+                                                <button type="button" onClick={() => setSelectedProfiles(prev => prev.map(p => ({ ...p, isSelected: !prev.some(x => x.isSelected) })))} style={{ fontSize: '0.75rem', color: 'var(--primary)', border: 'none', background: 'transparent', cursor: 'pointer', fontWeight: '600' }}>
+                                                    {selectedProfiles.some(p => p.isSelected) ? 'Desmarcar todos' : 'Marcar todos'}
                                                 </button>
                                             </div>
 
@@ -630,8 +645,18 @@ export default function NewTransactionModal({ onClose, onSuccess, initialType = 
                                             </div>
 
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto', paddingRight: '4px' }}>
-                                                {groupMembers.map(m => {
-                                                    const isSelected = selectedProfiles.find(p => p.id === m.id)?.isSelected;
+                                                {isLoadingMembers ? (
+                                                    <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                                                        <div className="spinner" style={{ marginBottom: '8px' }}></div>
+                                                        Carregando membros...
+                                                    </div>
+                                                ) : selectedProfiles.length === 0 ? (
+                                                    <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                                                        Nenhum membro encontrado neste grupo.
+                                                    </div>
+                                                ) : selectedProfiles.map(m => {
+                                                    const isSelected = m.isSelected;
+                                                    const isExternal = !groupMembers.find(gm => gm.id === m.id);
                                                     const nameDisplay = m.full_name || m.email || '?';
                                                     const initials = nameDisplay.substring(0, 2).toUpperCase();
 
@@ -644,9 +669,15 @@ export default function NewTransactionModal({ onClose, onSuccess, initialType = 
                                                                 onClick={() => { setSelectedProfiles(prev => prev.map(p => p.id === m.id ? { ...p, isSelected: !p.isSelected } : p)); }}
                                                                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', marginBottom: (isSelected && splitMode === 'custom') ? '8px' : '0' }}
                                                             >
-                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                                    <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--bg-secondary)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: '700' }}>{initials}</div>
-                                                                    <span style={{ fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-primary)' }}>{nameDisplay} {m.user_id === user.id && <span style={{ color: 'var(--text-tertiary)' }}>(Eu)</span>}</span>
+                                                                <div style={{ width: 32, height: 32, borderRadius: '50%', background: isExternal ? 'var(--bg-secondary)' : 'var(--primary)', opacity: isExternal ? 1 : 0.1, color: isExternal ? 'var(--text-secondary)' : 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: '700', position: 'relative' }}>
+                                                                    {initials}
+                                                                    {!isExternal && <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'var(--primary)', opacity: 0.1 }}></div>}
+                                                                </div>
+                                                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                                    <span style={{ fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-primary)' }}>
+                                                                        {nameDisplay} {m.user_id === user?.id && <span style={{ color: 'var(--text-tertiary)', fontSize: '0.8rem' }}>(Eu)</span>}
+                                                                    </span>
+                                                                    {isExternal && <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', fontWeight: '600', textTransform: 'uppercase' }}>Externo</span>}
                                                                 </div>
                                                                 <div style={{ width: 20, height: 20, borderRadius: '6px', border: isSelected ? 'none' : '2px solid var(--border)', background: isSelected ? 'var(--primary)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{isSelected && <Check size={14} color="#fff" />}</div>
                                                             </div>
@@ -670,9 +701,85 @@ export default function NewTransactionModal({ onClose, onSuccess, initialType = 
                                                                 </div>
                                                             )}
                                                         </div>
+
                                                     );
                                                 })}
-                                                {groupMembers.length === 0 && <div style={{ padding: '12px', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>Nenhum membro encontrado.</div>}
+                                            </div>
+
+                                            {/* External Participant Search */}
+
+                                            <div style={{ marginTop: '12px', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
+                                                {!isSearchingExternal ? (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setIsSearchingExternal(true)}
+                                                        style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '8px 12px', borderRadius: '12px', border: '1px dashed var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontSize: '0.85rem', cursor: 'pointer' }}
+                                                    >
+                                                        <Plus size={16} />
+                                                        Adicionar pessoa fora do grupo
+                                                    </button>
+                                                ) : (
+                                                    <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                        <div style={{ position: 'relative' }}>
+                                                            <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
+                                                            <input
+                                                                autoFocus
+                                                                type="text"
+                                                                placeholder="Buscar por nome..."
+                                                                value={participantSearch}
+                                                                onChange={e => setParticipantSearch(e.target.value)}
+                                                                style={{ width: '100%', padding: '8px 12px 8px 36px', borderRadius: '12px', border: '1px solid var(--primary)', background: 'var(--bg-card)', fontSize: '0.9rem', outline: 'none' }}
+                                                            />
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => { setIsSearchingExternal(false); setParticipantSearch(''); }}
+                                                                style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'transparent', color: 'var(--text-tertiary)', cursor: 'pointer' }}
+                                                            >
+                                                                <X size={14} />
+                                                            </button>
+                                                        </div>
+
+                                                        {participantSearch.length > 0 && (
+                                                            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', maxHeight: '120px', overflowY: 'auto', boxShadow: 'var(--shadow-md)' }}>
+                                                                {profiles
+                                                                    .filter(p => p.name.toLowerCase().includes(participantSearch.toLowerCase()) && !selectedProfiles.find(sp => sp.id === p.id))
+                                                                    .map(p => (
+                                                                        <div
+                                                                            key={p.id}
+                                                                            onClick={() => {
+                                                                                setSelectedProfiles(prev => [...prev, { ...p, isSelected: true }]);
+                                                                                setIsSearchingExternal(false);
+                                                                                setParticipantSearch('');
+                                                                            }}
+                                                                            style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-light)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem' }}
+                                                                        >
+                                                                            <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem' }}>{p.name.charAt(0).toUpperCase()}</div>
+                                                                            {p.name}
+                                                                        </div>
+                                                                    ))}
+                                                                <div
+                                                                    onClick={async () => {
+                                                                        const name = participantSearch.trim();
+                                                                        if (!name) return;
+                                                                        try {
+                                                                            const newProfile = await addProfile(name);
+                                                                            if (newProfile) {
+                                                                                setSelectedProfiles(prev => [...prev, { ...newProfile, isSelected: true }]);
+                                                                                setIsSearchingExternal(false);
+                                                                                setParticipantSearch('');
+                                                                            }
+                                                                        } catch (e) {
+                                                                            console.error("Erro ao criar perfil fantasma:", e);
+                                                                        }
+                                                                    }}
+                                                                    style={{ padding: '8px 12px', color: 'var(--primary)', fontWeight: '600', fontSize: '0.85rem', cursor: 'pointer', borderTop: '1px solid var(--border-light)' }}
+                                                                >
+                                                                    + Criar "{participantSearch}" como novo perfil
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </>

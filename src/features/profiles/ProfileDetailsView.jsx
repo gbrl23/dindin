@@ -179,23 +179,51 @@ export default function ProfileDetailsView() {
     };
 
     return (
-        <div className="container" style={{ paddingBottom: '80px' }}>
-            <header style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
-                <button onClick={() => navigate(-1)} style={{ background: 'transparent', color: 'var(--text-primary)' }}>
-                    <ArrowLeft size={24} />
+        <div className="container animate-fade-in" style={{ paddingBottom: '100px', marginTop: '24px' }}>
+            <header style={{ marginBottom: '32px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <button
+                    onClick={() => navigate(-1)}
+                    style={{
+                        background: 'var(--bg-secondary)',
+                        border: 'none',
+                        borderRadius: '50%',
+                        width: '40px',
+                        height: '40px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        color: 'var(--text-primary)'
+                    }}
+                >
+                    <ArrowLeft size={20} />
                 </button>
-                <div>
-                    <h1 className="text-gradient" style={{ fontSize: '1.5rem', fontWeight: '800' }}>
+                <div style={{ flex: 1 }}>
+                    <h1 style={{ fontSize: '1.8rem', fontWeight: '800', letterSpacing: '-0.5px', marginBottom: '2px' }}>
                         {profile.name}
                     </h1>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Detalhes e Gastos</p>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
+                        Detalhes e Gastos Individuais
+                    </p>
                 </div>
                 {profile.isOwner && (
                     <button
                         onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-                        style={{ marginLeft: 'auto', padding: '8px', background: 'var(--bg-secondary)', borderRadius: '50%', border: 'none', cursor: 'pointer', color: 'var(--text-primary)' }}
+                        style={{
+                            padding: '10px',
+                            background: 'var(--bg-secondary)',
+                            borderRadius: '12px',
+                            border: '1px solid var(--border)',
+                            cursor: 'pointer',
+                            color: 'var(--text-primary)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            fontSize: '0.85rem',
+                            fontWeight: '600'
+                        }}
                     >
-                        <Edit2 size={18} />
+                        <Edit2 size={16} /> Configurar
                     </button>
                 )}
             </header>
@@ -230,15 +258,32 @@ export default function ProfileDetailsView() {
                 </div>
             )}
 
-            {/* Filter */}
-            <div className="card" style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)' }}>
+            {/* Filter Section */}
+            <div className="card" style={{
+                marginBottom: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '16px 20px',
+                borderRadius: '16px',
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)'
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)' }}>
                     <Calendar size={18} />
-                    <span style={{ fontSize: '0.9rem' }}>Mês:</span>
+                    <span style={{ fontSize: '0.95rem', fontWeight: '600' }}>Mês de Referência:</span>
                 </div>
                 <select
                     className="input"
-                    style={{ width: 'auto', padding: '8px 12px' }}
+                    style={{
+                        width: 'auto',
+                        padding: '8px 16px',
+                        borderRadius: '12px',
+                        background: 'var(--bg-secondary)',
+                        border: '1px solid var(--border)',
+                        color: 'var(--text-primary)',
+                        fontWeight: '600'
+                    }}
                     value={selectedMonth}
                     onChange={(e) => setSelectedMonth(e.target.value)}
                 >
@@ -254,21 +299,27 @@ export default function ProfileDetailsView() {
                 </select>
             </div>
 
-            {/* Summary Card for Month */}
+            {/* Premium Summary Card (Amber for Debt) */}
             <div className="card" style={{
                 padding: '24px',
-                marginBottom: '24px',
-                background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.05) 100%)',
-                border: '1px solid rgba(239, 68, 68, 0.2)'
+                marginBottom: '32px',
+                background: totalShareMonth > 0 ? 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)' : 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                color: 'white',
+                boxShadow: totalShareMonth > 0 ? '0 10px 30px rgba(245, 158, 11, 0.3)' : '0 10px 30px rgba(16, 185, 129, 0.2)',
+                border: 'none',
+                borderRadius: '24px'
             }}>
-                <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '8px' }}>
-                    Total Devido em {formatMonth(selectedMonth)}
-                </label>
-                <div style={{ fontSize: '2.5rem', fontWeight: '800', color: 'var(--danger)' }}>
-                    R$ {totalShareMonth.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px', opacity: 0.9 }}>
+                    <DollarSign size={20} />
+                    <span style={{ fontSize: '1rem', fontWeight: '500' }}>
+                        {totalShareMonth > 0 ? `Total em aberto em ${formatMonth(selectedMonth)}` : 'Tudo pago neste mês!'}
+                    </span>
                 </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '8px' }}>
-                    {currentMonthTransactions.length} {currentMonthTransactions.length === 1 ? 'gasto compartilhado' : 'gastos compartilhados'}
+                <div style={{ fontSize: '2.5rem', fontWeight: '800' }}>
+                    R$ {totalShareMonth.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+                <div style={{ fontSize: '0.9rem', opacity: 0.8, marginTop: '4px' }}>
+                    {currentMonthTransactions.length} {currentMonthTransactions.length === 1 ? 'gasto compartilhado' : 'gastos compartilhados'} no período
                 </div>
             </div>
 
@@ -287,76 +338,91 @@ export default function ProfileDetailsView() {
                             const isExpanded = expandedTransactions[t.id];
 
                             return (
-                                <div key={t.id} className="card" style={{ padding: '16px' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                                <div key={t.id} className="card hover-scale" style={{
+                                    padding: '20px',
+                                    borderRadius: '20px',
+                                    border: '1px solid var(--border)',
+                                    background: 'var(--bg-card)'
+                                }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
                                         <div style={{ flex: 1 }}>
-                                            <div style={{ fontWeight: '600', fontSize: '1rem' }}>{t.description}</div>
-                                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                                            <div style={{ fontWeight: '700', fontSize: '1.1rem', color: 'var(--text-primary)' }}>{t.description}</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <Calendar size={14} />
                                                 {new Date(t.date).toLocaleDateString('pt-BR')}
                                                 {t.card?.name && ` • ${t.card.name}`}
                                             </div>
                                             {t.payer?.full_name && (
-                                                <div style={{ fontSize: '0.75rem', color: 'var(--accent)', marginTop: '4px' }}>
-                                                    Pago por {t.payer.full_name.split(' ')[0]}
+                                                <div style={{
+                                                    fontSize: '0.75rem',
+                                                    color: 'var(--primary)',
+                                                    marginTop: '8px',
+                                                    background: 'rgba(81, 0, 255, 0.05)',
+                                                    padding: '2px 10px',
+                                                    borderRadius: '20px',
+                                                    display: 'inline-block',
+                                                    fontWeight: '600'
+                                                }}>
+                                                    Pago por {t.payer.full_name}
                                                 </div>
                                             )}
                                         </div>
                                         <div style={{ textAlign: 'right' }}>
-                                            <div style={{ fontWeight: '700', fontSize: '1.1rem', color: isPaid ? 'var(--success)' : 'var(--danger)' }}>
-                                                R$ {t.remainingBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                            <div style={{ fontWeight: '800', fontSize: '1.2rem', color: isPaid ? 'var(--success)' : 'var(--warning)' }}>
+                                                R$ {t.remainingBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </div>
-                                            <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
-                                                de R$ {t.myShare.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '500' }}>
+                                                de R$ {t.myShare.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </div>
                                         </div>
                                     </div>
 
                                     {/* Payment Progress Bar */}
-                                    <div style={{ marginBottom: '12px' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                                            <span>{isPaid ? 'Pago' : `${paymentProgress.toFixed(0)}% pago`}</span>
-                                            <span>R$ {t.totalPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} pago</span>
+                                    <div style={{ marginBottom: '16px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                                            <span style={{ fontWeight: '600' }}>{isPaid ? 'Totalmente Pago' : `${paymentProgress.toFixed(0)}% concluído`}</span>
+                                            <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>R$ {t.totalPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} pago</span>
                                         </div>
                                         <div style={{
                                             width: '100%',
-                                            height: '6px',
+                                            height: '8px',
                                             background: 'var(--bg-secondary)',
-                                            borderRadius: '3px',
+                                            borderRadius: '10px',
                                             overflow: 'hidden'
                                         }}>
                                             <div style={{
                                                 width: `${Math.min(paymentProgress, 100)}%`,
                                                 height: '100%',
-                                                background: isPaid ? 'var(--success)' : 'var(--primary)',
-                                                transition: 'width 0.3s ease'
+                                                background: isPaid ? 'var(--success)' : 'linear-gradient(90deg, var(--primary) 0%, #6366f1 100%)',
+                                                transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                borderRadius: '10px'
                                             }} />
                                         </div>
                                     </div>
 
                                     {/* Actions */}
-                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                    <div style={{ display: 'flex', gap: '10px' }}>
                                         {!isPaid && (
                                             <button
                                                 onClick={() => {
                                                     const shareData = { ...t.share, transaction: t, remainingBalance: t.remainingBalance };
-                                                    console.log('Share data being sent to modal:', shareData);
-                                                    console.log('transaction_id:', shareData.transaction_id);
-                                                    console.log('profile_id:', shareData.profile_id);
                                                     setSelectedShare(shareData);
                                                 }}
                                                 className="btn btn-primary"
                                                 style={{
                                                     flex: 1,
-                                                    padding: '8px 16px',
-                                                    fontSize: '0.85rem',
+                                                    padding: '10px 16px',
+                                                    fontSize: '0.9rem',
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
-                                                    gap: '6px'
+                                                    gap: '8px',
+                                                    borderRadius: '12px',
+                                                    fontWeight: '700'
                                                 }}
                                             >
-                                                <DollarSign size={16} />
-                                                Pagar
+                                                <DollarSign size={18} />
+                                                Registrar Pagamento
                                             </button>
                                         )}
                                         {t.payments && t.payments.length > 0 && (
@@ -364,21 +430,22 @@ export default function ProfileDetailsView() {
                                                 onClick={() => toggleTransactionExpanded(t.id)}
                                                 style={{
                                                     flex: isPaid ? 1 : 0,
-                                                    padding: '8px 16px',
+                                                    padding: '10px 16px',
                                                     fontSize: '0.85rem',
                                                     background: 'var(--bg-secondary)',
                                                     color: 'var(--text-primary)',
                                                     border: '1px solid var(--border)',
-                                                    borderRadius: '8px',
+                                                    borderRadius: '12px',
                                                     cursor: 'pointer',
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
-                                                    gap: '6px'
+                                                    gap: '8px',
+                                                    fontWeight: '600'
                                                 }}
                                             >
                                                 {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                                                {t.payments.length} {t.payments.length === 1 ? 'Pagamento' : 'Pagamentos'}
+                                                {t.payments.length} {t.payments.length === 1 ? 'Lançamento' : 'Lançamentos'}
                                             </button>
                                         )}
                                     </div>
@@ -421,7 +488,7 @@ export default function ProfileDetailsView() {
                                                         </div>
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                             <div style={{ fontWeight: '600', color: 'var(--success)' }}>
-                                                                R$ {parseFloat(payment.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                                R$ {parseFloat(payment.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                             </div>
                                                             <div style={{ display: 'flex', gap: '4px' }}>
                                                                 <button

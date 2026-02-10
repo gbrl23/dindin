@@ -31,7 +31,7 @@ export function useProfiles() {
             // Compute isOwner flag (if the profile is the current user's own profile)
             const enhancedProfiles = data.map(p => ({
                 ...p,
-                name: p.full_name, // Map for compatibility with existing UI
+                name: p.full_name || p.email || 'Usuário', // Map for compatibility with existing UI
                 isOwner: p.user_id === user?.id
             }));
 

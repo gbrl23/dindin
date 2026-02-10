@@ -763,7 +763,7 @@ export default function NewTransactionModal({ onClose, onSuccess, initialType = 
                                                         {participantSearch.length > 0 && (
                                                             <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', maxHeight: '120px', overflowY: 'auto', boxShadow: 'var(--shadow-md)' }}>
                                                                 {profiles
-                                                                    .filter(p => p.name.toLowerCase().includes(participantSearch.toLowerCase()) && !selectedProfiles.find(sp => sp.id === p.id))
+                                                                    .filter(p => (p.name || '').toLowerCase().includes(participantSearch.toLowerCase()) && !selectedProfiles.find(sp => sp.id === p.id))
                                                                     .map(p => (
                                                                         <div
                                                                             key={p.id}
@@ -774,8 +774,8 @@ export default function NewTransactionModal({ onClose, onSuccess, initialType = 
                                                                             }}
                                                                             style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-light)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem' }}
                                                                         >
-                                                                            <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem' }}>{p.name.charAt(0).toUpperCase()}</div>
-                                                                            {p.name}
+                                                                            <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem' }}>{p.name?.charAt(0).toUpperCase() || 'U'}</div>
+                                                                            {p.name || 'Usuário'}
                                                                         </div>
                                                                     ))}
                                                                 <div

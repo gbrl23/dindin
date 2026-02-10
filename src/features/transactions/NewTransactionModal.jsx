@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Users, CreditCard, Repeat, Check, Calendar, User, Search, Plus } from 'lucide-react';
+import { X, Users, CreditCard, Repeat, Check, Calendar, User, Search, Plus, Upload, Target } from 'lucide-react';
 import { validateAmount, validateDescription, validateDate, validateAll, errorInputStyle, getErrorMessageStyle } from '../../utils/validation';
 import { useTransactions } from '../../hooks/useTransactions';
 import { useProfiles } from '../../hooks/useProfiles';
@@ -9,6 +9,8 @@ import { useCategories } from '../../hooks/useCategories';
 import { useAuth } from '../../contexts/AuthContext';
 import NewCategoryModal from '../categories/NewCategoryModal';
 import NewCardModal from '../cards/NewCardModal';
+import { useGoals } from '../../hooks/useGoals';
+import { Target } from 'lucide-react';
 
 export default function NewTransactionModal({ onClose, onSuccess, initialType = 'expense' }) {
     const { user } = useAuth();
@@ -17,6 +19,7 @@ export default function NewTransactionModal({ onClose, onSuccess, initialType = 
     const { groups, getGroupMembers } = useGroups();
     const { addTransactionsBulk } = useTransactions();
     const { categories, refreshCategories } = useCategories();
+    const { goals } = useGoals();
 
     // UI State
     const [type, setType] = useState(initialType);
@@ -42,6 +45,7 @@ export default function NewTransactionModal({ onClose, onSuccess, initialType = 
     const [isCreatingCategory, setIsCreatingCategory] = useState(false);
     const [isCardModalOpen, setIsCardModalOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [selectedGoalId, setSelectedGoalId] = useState('');
 
     // Competence Logic
     const [competenceDate, setCompetenceDate] = useState(formatLocalDate(new Date()));
@@ -90,6 +94,7 @@ export default function NewTransactionModal({ onClose, onSuccess, initialType = 
     const [customShares, setCustomShares] = useState({}); // { [profileId]: string }
     const [participantSearch, setParticipantSearch] = useState('');
     const [isSearchingExternal, setIsSearchingExternal] = useState(false);
+    const [file, setFile] = useState(null);
 
     // Init Logic
     useEffect(() => {
@@ -319,6 +324,7 @@ export default function NewTransactionModal({ onClose, onSuccess, initialType = 
                     shares: sharesData,
                     series_id: newSeriesId,
                     group_id: groupIdToUse,
+                    goal_id: (type === 'investment' && selectedGoalId) ? selectedGoalId : null,
                     competence_date: itemCompetenceDate || competenceDate // Fallback if calc fails, but calc should work
                 });
             }
@@ -527,6 +533,78 @@ export default function NewTransactionModal({ onClose, onSuccess, initialType = 
                             </div>
                         </div>
 
+                        {/* Competence Date (Manual Override) */}
+                        {(type === 'income' || type === 'investment') && (
+                            <div style={{ padding: '0 8px' }}>
+                                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600', marginBottom: '8px', display: 'block' }}>Mês de Competência</label>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <div style={{ position: 'relative', flex: 1 }}>
+                                        <Calendar size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
+                                        <input
+                                            type="date"
+                                            value={competenceDate}
+                                            onChange={e => {
+                                                setCompetenceDate(e.target.value);
+                                                setIsCompetenceManual(true);
+                                            }}
+                                            style={{
+                                                width: '100%', padding: '10px 10px 10px 36px',
+                                                borderRadius: '12px', border: '1px solid var(--border)',
+                                                background: 'var(--bg-secondary)', fontSize: '0.85rem', fontWeight: '500',
+                                                outline: 'none'
+                                            }}
+                                        />
+                                    </div>
+                                    {isCompetenceManual && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsCompetenceManual(false)}
+                                            style={{ border: 'none', background: 'transparent', color: 'var(--primary)', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer' }}
+                                        >
+                                            Resetar
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Goal Selector for Investments */}
+                        {type === 'investment' && goals.length > 0 && (
+                            <div style={{ padding: '0 8px' }}>
+                                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600', marginBottom: '8px', display: 'block' }}>Vincular a uma Meta</label>
+                                <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedGoalId('')}
+                                        style={{
+                                            padding: '8px 12px', borderRadius: '12px', border: selectedGoalId === '' ? '2px solid var(--primary)' : '1px solid var(--border)',
+                                            background: selectedGoalId === '' ? 'rgba(81, 0, 255, 0.05)' : 'var(--bg-secondary)',
+                                            fontSize: '0.8rem', fontWeight: '600', color: selectedGoalId === '' ? 'var(--primary)' : 'var(--text-secondary)',
+                                            cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s'
+                                        }}
+                                    >
+                                        Sem Meta
+                                    </button>
+                                    {goals.map(goal => (
+                                        <button
+                                            key={goal.id}
+                                            type="button"
+                                            onClick={() => setSelectedGoalId(goal.id)}
+                                            style={{
+                                                padding: '8px 12px', borderRadius: '12px', border: selectedGoalId === goal.id ? `2px solid ${goal.color}` : '1px solid var(--border)',
+                                                background: selectedGoalId === goal.id ? `${goal.color}15` : 'var(--bg-secondary)',
+                                                fontSize: '0.8rem', fontWeight: '600', color: selectedGoalId === goal.id ? goal.color : 'var(--text-secondary)',
+                                                cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s'
+                                            }}
+                                        >
+                                            <Target size={14} />
+                                            {goal.name}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         {/* Description & Date */}
                         <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '12px' }}>
                             <div style={{
@@ -564,6 +642,41 @@ export default function NewTransactionModal({ onClose, onSuccess, initialType = 
                                     }}
                                     style={{ border: 'none', background: 'transparent', fontSize: '0.95rem', outline: 'none', width: '100%', padding: 0, fontFamily: 'inherit' }}
                                 />
+                            </div>
+                        </div>
+
+                        {/* Attachment */}
+                        <div style={{ padding: '0 8px' }}>
+                            <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600', marginBottom: '8px', display: 'block' }}>Anexo (Opcional)</label>
+                            <div style={{ position: 'relative' }}>
+                                <input
+                                    type="file"
+                                    id="modal-file-upload"
+                                    onChange={(e) => {
+                                        if (e.target.files[0]) setFile(e.target.files[0].name);
+                                    }}
+                                    style={{ display: 'none' }}
+                                />
+                                <label
+                                    htmlFor="modal-file-upload"
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '12px 16px', borderRadius: '12px',
+                                        background: 'var(--bg-secondary)', border: '1px dashed var(--border)', cursor: 'pointer',
+                                        color: file ? 'var(--primary)' : 'var(--text-tertiary)', fontSize: '0.85rem', fontWeight: '500', transition: 'all 0.2s'
+                                    }}
+                                >
+                                    <Upload size={16} />
+                                    {file ? file : 'Comprovante ou foto'}
+                                </label>
+                                {file && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setFile(null)}
+                                        style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'transparent', color: 'var(--text-tertiary)', cursor: 'pointer' }}
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                )}
                             </div>
                         </div>
 
@@ -763,7 +876,7 @@ export default function NewTransactionModal({ onClose, onSuccess, initialType = 
                                                         {participantSearch.length > 0 && (
                                                             <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', maxHeight: '120px', overflowY: 'auto', boxShadow: 'var(--shadow-md)' }}>
                                                                 {profiles
-                                                                    .filter(p => (p.name || '').toLowerCase().includes(participantSearch.toLowerCase()) && !selectedProfiles.find(sp => sp.id === p.id))
+                                                                    .filter(p => (p.full_name || p.name || '').toLowerCase().includes(participantSearch.toLowerCase()) && !selectedProfiles.find(sp => sp.id === p.id))
                                                                     .map(p => (
                                                                         <div
                                                                             key={p.id}

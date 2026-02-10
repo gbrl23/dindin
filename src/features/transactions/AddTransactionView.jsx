@@ -11,7 +11,7 @@ import { useCategories } from '../../hooks/useCategories';
 import { useGoals } from '../../hooks/useGoals';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { ArrowLeft, Check, Users, Upload, Calendar, CreditCard, Repeat, Edit2, Plus, Target } from 'lucide-react';
+import { ArrowLeft, Check, Users, Upload, Calendar, CreditCard, Repeat, Edit2, Plus, Target, Search, X } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import NewCategoryModal from '../categories/NewCategoryModal';
 import NewCardModal from '../cards/NewCardModal';
@@ -34,6 +34,7 @@ export default function AddTransactionView() {
     const { goals } = useGoals();
     const { addTransaction, addTransactionsBulk, updateTransaction, transactions, fetchTransactions, updateTransactionSeries, removeTransactionSeries } = useTransactions();
     const { addBill } = useStorage();
+    const { addProfile } = useProfiles();
 
     const isEditing = !!id;
 
@@ -64,6 +65,8 @@ export default function AddTransactionView() {
     const [payerId, setPayerId] = useState('');
 
     const [file, setFile] = useState(null);
+    const [participantSearch, setParticipantSearch] = useState('');
+    const [isSearchingExternal, setIsSearchingExternal] = useState(false);
 
     // Competence Date Logic
     const [competenceDate, setCompetenceDate] = useState(formatLocalDate(new Date()));
@@ -221,7 +224,7 @@ export default function AddTransactionView() {
                 })));
             }
         }
-    }, [amount, selectedProfiles.map(p => p.isSelected).join(','), splitMode, type, isSplitEnabled, installments]);
+    }, [amount, selectedProfiles.map(p => p.isSelected).join(','), selectedProfiles.length, splitMode, type, isSplitEnabled, installments]);
 
 
     const toggleProfile = (profileId) => {
@@ -586,6 +589,41 @@ export default function AddTransactionView() {
                             onFocus={e => e.target.style.background = '#FFFFFF'}
                             onBlur={e => e.target.style.background = '#F8F8FA'}
                         />
+                    </div>
+
+                    {/* Attachment */}
+                    <div>
+                        <label style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '8px', display: 'block' }}>Anexo (Opcional)</label>
+                        <div style={{ position: 'relative' }}>
+                            <input
+                                type="file"
+                                id="file-upload"
+                                onChange={(e) => {
+                                    if (e.target.files[0]) setFile(e.target.files[0].name);
+                                }}
+                                style={{ display: 'none' }}
+                            />
+                            <label
+                                htmlFor="file-upload"
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '16px', borderRadius: '16px',
+                                    background: '#F8F8FA', border: '2px dashed var(--border)', cursor: 'pointer',
+                                    color: file ? 'var(--primary)' : 'var(--text-tertiary)', fontSize: '0.9rem', fontWeight: '500', transition: 'all 0.2s'
+                                }}
+                            >
+                                <Upload size={18} />
+                                {file ? file : 'Adicionar comprovante ou foto'}
+                            </label>
+                            {file && (
+                                <button
+                                    type="button"
+                                    onClick={() => setFile(null)}
+                                    style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'transparent', color: 'var(--text-tertiary)', cursor: 'pointer' }}
+                                >
+                                    <X size={16} />
+                                </button>
+                            )}
+                        </div>
                     </div>
 
                     {/* Category Selector */}
@@ -982,6 +1020,81 @@ export default function AddTransactionView() {
                                         )}
                                     </div>
                                 ))}
+                            </div>
+
+                            {/* External Participant Search */}
+                            <div style={{ marginTop: '12px', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
+                                {!isSearchingExternal ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsSearchingExternal(true)}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '12px', borderRadius: '16px', border: '1px dashed var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontSize: '0.85rem', cursor: 'pointer' }}
+                                    >
+                                        <Plus size={16} />
+                                        Adicionar pessoa fora do grupo
+                                    </button>
+                                ) : (
+                                    <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                        <div style={{ position: 'relative' }}>
+                                            <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
+                                            <input
+                                                autoFocus
+                                                type="text"
+                                                placeholder="Buscar por nome..."
+                                                value={participantSearch}
+                                                onChange={e => setParticipantSearch(e.target.value)}
+                                                style={{ width: '100%', padding: '12px 12px 12px 36px', borderRadius: '16px', border: '1px solid var(--primary)', background: 'var(--bg-card)', fontSize: '0.9rem', outline: 'none' }}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => { setIsSearchingExternal(false); setParticipantSearch(''); }}
+                                                style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'transparent', color: 'var(--text-tertiary)', cursor: 'pointer' }}
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        </div>
+
+                                        {participantSearch.length > 0 && (
+                                            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '16px', maxHeight: '160px', overflowY: 'auto', boxShadow: 'var(--shadow-md)' }}>
+                                                {profiles
+                                                    .filter(p => (p.full_name || p.name || '').toLowerCase().includes(participantSearch.toLowerCase()) && !selectedProfiles.find(sp => sp.id === p.id))
+                                                    .map(p => (
+                                                        <div
+                                                            key={p.id}
+                                                            onClick={() => {
+                                                                setSelectedProfiles(prev => [...prev, { ...p, isSelected: true, share: 0 }]);
+                                                                setIsSearchingExternal(false);
+                                                                setParticipantSearch('');
+                                                            }}
+                                                            style={{ padding: '12px', borderBottom: '1px solid var(--border-light)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem' }}
+                                                        >
+                                                            <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem' }}>{(p.full_name || p.name)?.charAt(0).toUpperCase()}</div>
+                                                            {p.full_name || p.name}
+                                                        </div>
+                                                    ))}
+                                                <div
+                                                    onClick={async () => {
+                                                        const name = participantSearch.trim();
+                                                        if (!name) return;
+                                                        try {
+                                                            const newProfile = await addProfile(name);
+                                                            if (newProfile) {
+                                                                setSelectedProfiles(prev => [...prev, { ...newProfile, isSelected: true, share: 0 }]);
+                                                                setIsSearchingExternal(false);
+                                                                setParticipantSearch('');
+                                                            }
+                                                        } catch (e) {
+                                                            console.error("Erro ao criar perfil fantasma:", e);
+                                                        }
+                                                    }}
+                                                    style={{ padding: '12px', color: 'var(--primary)', fontWeight: '600', fontSize: '0.85rem', cursor: 'pointer', borderTop: '1px solid var(--border-light)' }}
+                                                >
+                                                    + Criar "{participantSearch}" como novo perfil
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
 
                             {/* Payer Selection */}

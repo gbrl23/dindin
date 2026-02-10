@@ -10,7 +10,6 @@ import { useAuth } from '../../contexts/AuthContext';
 import NewCategoryModal from '../categories/NewCategoryModal';
 import NewCardModal from '../cards/NewCardModal';
 import { useGoals } from '../../hooks/useGoals';
-import { Target } from 'lucide-react';
 
 export default function NewTransactionModal({ onClose, onSuccess, initialType = 'expense' }) {
     const { user } = useAuth();

@@ -138,10 +138,16 @@ export default function NewTransactionModal({ onClose, onSuccess, initialType = 
                 .finally(() => setIsLoadingMembers(false));
         } else {
             setGroupMembers([]);
-            setSelectedProfiles([]);
+            if (profiles && profiles.length > 0) {
+                setSelectedProfiles(profiles.map(p => ({ ...p, isSelected: p.user_id === user?.id })));
+                const me = profiles.find(p => p.user_id === user?.id);
+                if (me) setPayerId(me.id);
+            } else {
+                setSelectedProfiles([]);
+            }
             setIsLoadingMembers(false);
         }
-    }, [selectedGroupId, user?.id]);
+    }, [selectedGroupId, user?.id, profiles]);
 
     const getThemeColor = (t = type) => {
         switch (t) {
@@ -681,25 +687,23 @@ export default function NewTransactionModal({ onClose, onSuccess, initialType = 
                         </div>
 
                         {/* Group Toggle */}
-                        {type === 'expense' && (
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <div style={{ padding: '6px', background: 'var(--bg-secondary)', borderRadius: '8px' }}><Users size={16} color="var(--primary)" /></div>
-                                    <span style={{ fontSize: '0.9rem', fontWeight: '500' }}>Dividir em Grupo</span>
-                                </div>
-                                <label className="switch">
-                                    <input
-                                        type="checkbox"
-                                        checked={isGroupTransaction}
-                                        onChange={(e) => setIsGroupTransaction(e.target.checked)}
-                                    />
-                                    <span className="slider"></span>
-                                </label>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ padding: '6px', background: 'var(--bg-secondary)', borderRadius: '8px' }}><Users size={16} color="var(--primary)" /></div>
+                                <span style={{ fontSize: '0.9rem', fontWeight: '500' }}>Dividir em Grupo</span>
                             </div>
-                        )}
+                            <label className="switch">
+                                <input
+                                    type="checkbox"
+                                    checked={isGroupTransaction}
+                                    onChange={(e) => setIsGroupTransaction(e.target.checked)}
+                                />
+                                <span className="slider"></span>
+                            </label>
+                        </div>
 
                         {/* GROUP UI (Expanded) */}
-                        {isGroupTransaction && type === 'expense' && (
+                        {isGroupTransaction && (
                             <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '16px', background: '#F8F8FA', padding: '16px', borderRadius: '16px', border: '1px solid var(--border)' }}>
                                 {/* Group/Payer/Members Logic Same as Before - Abbreviated for brevity if unchanged logic is huge, but I must keep it. I will keep it. */}
                                 <div>
@@ -715,7 +719,7 @@ export default function NewTransactionModal({ onClose, onSuccess, initialType = 
                                         </select>
                                     </div>
                                 </div>
-                                {selectedGroupId && (
+                                {isGroupTransaction && (
                                     <>
                                         <div>
                                             <label style={{ fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: '8px', display: 'block' }}>Quem pagou?</label>

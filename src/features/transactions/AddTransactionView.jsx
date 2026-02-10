@@ -120,7 +120,7 @@ export default function AddTransactionView() {
         } else {
             if (profiles.length > 0 && !isEditing) {
                 setSelectedProfiles(
-                    profiles.map(p => ({ ...p, isSelected: p.isOwner, share: 0 }))
+                    profiles.map(p => ({ ...p, isSelected: p.user_id === user?.id, share: 0, isOwner: p.user_id === user?.id }))
                 );
             }
         }
@@ -921,28 +921,21 @@ export default function AddTransactionView() {
                     )}
                 </div>
 
-                {/* Group / Split (Simplified for this view, can toggle) */}
-                {type === 'expense' && (
-                    <div className="card" style={{ padding: '16px', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <div style={{ padding: '10px', background: '#EAF6FF', borderRadius: '12px', color: '#007AFF' }}>
-                                <Users size={20} />
-                            </div>
-                            <span style={{ fontSize: '0.95rem', fontWeight: '600' }}>Dividir com Grupo</span>
+                <div className="card" style={{ padding: '16px', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ padding: '10px', background: '#EAF6FF', borderRadius: '12px', color: '#007AFF' }}>
+                            <Users size={20} />
                         </div>
-                        <label className="switch">
-                            <input type="checkbox" checked={isSplitEnabled} onChange={(e) => setIsSplitEnabled(e.target.checked)} />
-                            <span className="slider"></span>
-                        </label>
+                        <span style={{ fontSize: '0.95rem', fontWeight: '600' }}>Dividir com Grupo</span>
                     </div>
-                )}
+                    <label className="switch">
+                        <input type="checkbox" checked={isSplitEnabled} onChange={(e) => setIsSplitEnabled(e.target.checked)} />
+                        <span className="slider"></span>
+                    </label>
+                </div>
 
-                {/* Logic for group selector inside the card if enabled... keeping simple to match premium aesthetic */}
-                {/* Group / Split Card */}
-                {type === 'expense' && isSplitEnabled && (
+                {isSplitEnabled && (
                     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-
-                        {/* 1. Group Selection */}
                         <div className="card" style={{ padding: '20px', borderRadius: '24px' }}>
                             <label style={{ fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: '12px', display: 'block' }}>Grupo</label>
                             <div style={{ background: '#F8F8FA', borderRadius: '16px', padding: '4px 12px', border: '1px solid var(--border)' }}>
@@ -957,7 +950,6 @@ export default function AddTransactionView() {
                             </div>
                         </div>
 
-                        {/* 2. Split Details */}
                         <div className="card" style={{ padding: '24px', borderRadius: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <h3 style={{ fontSize: '1rem', fontWeight: '700' }}>Participantes</h3>
@@ -979,7 +971,6 @@ export default function AddTransactionView() {
                                 </div>
                             </div>
 
-                            {/* Profiles Grid */}
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                 {selectedProfiles.map(p => (
                                     <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: '#F8F8FA', borderRadius: '16px' }}>
@@ -1155,7 +1146,7 @@ export default function AddTransactionView() {
                 >
                     Salvar Alterações
                 </button>
-            </form>
+            </form >
 
             {isCreatingCategory && (
                 <NewCategoryModal
@@ -1163,25 +1154,28 @@ export default function AddTransactionView() {
                     onSuccess={refreshCategories}
                     onClose={() => setIsCreatingCategory(false)}
                 />
-            )}
+            )
+            }
 
-            {isCardModalOpen && (
-                <NewCardModal
-                    onClose={() => setIsCardModalOpen(false)}
-                    onSuccess={(newCard) => {
-                        // Assuming cards context auto-refreshes. 
-                        // If newCard is available and corresponds to the new entry, we can select it.
-                        // Since useCards might take a moment, we optimistically expect content update or manually trigger fetch if useCards expose it.
-                        // For now we assume standard SWR/Context behavior.
-                        // If result provided (supabase insert response), we select it.
-                        if (newCard && newCard.length > 0) {
-                            setCard(newCard[0].id);
-                        } else if (newCard && newCard.id) {
-                            setCard(newCard.id);
-                        }
-                    }}
-                />
-            )}
+            {
+                isCardModalOpen && (
+                    <NewCardModal
+                        onClose={() => setIsCardModalOpen(false)}
+                        onSuccess={(newCard) => {
+                            // Assuming cards context auto-refreshes. 
+                            // If newCard is available and corresponds to the new entry, we can select it.
+                            // Since useCards might take a moment, we optimistically expect content update or manually trigger fetch if useCards expose it.
+                            // For now we assume standard SWR/Context behavior.
+                            // If result provided (supabase insert response), we select it.
+                            if (newCard && newCard.length > 0) {
+                                setCard(newCard[0].id);
+                            } else if (newCard && newCard.id) {
+                                setCard(newCard.id);
+                            }
+                        }}
+                    />
+                )
+            }
 
             <SeriesActionModal
                 isOpen={showDeleteChoice}
@@ -1208,6 +1202,6 @@ export default function AddTransactionView() {
                 onClose={() => setShowEditChoice(false)}
                 onConfirm={handleConfirmEdit}
             />
-        </div>
+        </div >
     );
 }

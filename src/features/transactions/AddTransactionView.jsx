@@ -958,9 +958,9 @@ export default function AddTransactionView() {
                                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                 color: '#FFF', fontSize: '0.9rem', fontWeight: '700'
                                             }}>
-                                                {!p.avatar_url && p.name?.charAt(0).toUpperCase()}
+                                                {!p.avatar_url && (p.full_name || p.name)?.charAt(0).toUpperCase()}
                                             </div>
-                                            <span style={{ fontSize: '0.9rem', fontWeight: '600' }}>{p.name || 'Usuário'} {p.isOwner && '(Eu)'}</span>
+                                            <span style={{ fontSize: '0.9rem', fontWeight: '600' }}>{p.full_name || p.name || 'Usuário'} {p.isOwner && '(Eu)'}</span>
                                         </div>
 
                                         {p.isSelected && (
@@ -1002,7 +1002,7 @@ export default function AddTransactionView() {
                                                 cursor: 'pointer'
                                             }}
                                         >
-                                            {p.name}
+                                            {p.full_name || p.name || 'Usuário'}
                                         </button>
                                     ))}
                                 </div>

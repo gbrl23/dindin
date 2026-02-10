@@ -234,6 +234,7 @@ export function useGroups() {
                 if (!profile) return null; // Should not happen if fixed
                 return {
                     ...profile,
+                    name: profile.full_name || profile.email || 'Usuário',
                     role: m.role
                 };
             }).filter(p => !!p);

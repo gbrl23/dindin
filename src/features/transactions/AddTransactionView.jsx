@@ -313,6 +313,11 @@ export default function AddTransactionView() {
             // Logic Simplified for brevity in this tool call, but effectively doing the same
             // Note: I will assume the previous logic was correct and basic.
 
+            const transactionShares = isSplitEnabled ? selectedProfiles.filter(p => !isSplitEnabled || p.isSelected).map(p => ({
+                profile_id: p.id,
+                share_amount: p.share
+            })) : [];
+
             const transactionData = {
                 amount: totalAmount,
                 description,
@@ -325,7 +330,8 @@ export default function AddTransactionView() {
                 group_id: selectedGroupId || null,
                 goal_id: (type === 'investment' && selectedGoalId) ? selectedGoalId : null,
                 series_id: seriesId, // Preserve existing
-                competence_date: competenceDate
+                competence_date: competenceDate,
+                shares: transactionShares
             };
 
             // IF EDIT
@@ -342,7 +348,7 @@ export default function AddTransactionView() {
                 else if (numInstallments > 1) {
                     // 1. Update the CURRENT transaction to be the "head" (i=0) of the new series
                     // We need to generate a seriesId
-                    const generatedSeriesId = crypto.randomUUID();
+                    const generatedSeriesId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).substring(2);
 
                     await updateTransaction(id, {
                         ...transactionData,
@@ -393,7 +399,8 @@ export default function AddTransactionView() {
                             description: description + ((!isRecurring) ? ` (${i + 1}/${numInstallments})` : ''),
                             date: txDateStr,
                             invoice_date: invoiceDate,
-                            series_id: generatedSeriesId
+                            series_id: generatedSeriesId,
+                            shares: transactionShares // Distribute shares across installments
                         });
                     }
                     if (transactionsBatch.length > 0) {
@@ -423,6 +430,8 @@ export default function AddTransactionView() {
                     return { year: newYear, month: newMonth, day: d };
                 };
 
+                const createdSeriesId = numInstallments > 1 ? ((typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).substring(2)) : null;
+
                 for (let i = 0; i < numInstallments; i++) {
                     const { year: txYear, month: txMonth, day: txDay } = addMonthsToDate(baseYear, baseMonth, baseDay, i);
                     const txDateStr = `${txYear}-${pad(txMonth)}-${pad(txDay)}`;
@@ -449,7 +458,8 @@ export default function AddTransactionView() {
                         description: description + ((numInstallments > 1 && !isRecurring) ? ` (${i + 1}/${numInstallments})` : ''),
                         date: txDateStr,
                         invoice_date: invoiceDate,
-                        series_id: newSeriesId
+                        series_id: createdSeriesId,
+                        shares: transactionShares // Distribute shares across installments
                     });
                 }
                 if (transactionsBatch.length > 0) {

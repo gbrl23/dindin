@@ -106,7 +106,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
                     display: 'flex',
                     flexDirection: 'column',
                     transition: 'width 0.3s cubic-bezier(0.2, 0, 0, 1), left 0.3s cubic-bezier(0.2, 0, 0, 1)',
-                    zIndex: 50,
+                    zIndex: 2000,
                     boxShadow: mobileOpen ? '4px 0 20px rgba(0,0,0,0.15)' : 'none'
                 }}
             >
@@ -174,14 +174,12 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <div style={{
                             width: 40, height: 40,
-                            background: 'linear-gradient(135deg, var(--primary), #7000FF)',
                             borderRadius: '12px',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            color: '#fff',
-                            boxShadow: '0 4px 12px rgba(81, 0, 255, 0.2)',
+                            color: 'var(--primary)',
                             flexShrink: 0
                         }}>
-                            <Coins size={22} />
+                            <Coins size={28} />
                         </div>
                         {(!isCollapsed || isMobile) && (
                             <span style={{
@@ -199,21 +197,26 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
                 </div>
 
                 {/* Main Navigation */}
-                <nav style={{ flex: 1, padding: '0 16px 20px 16px', display: 'flex', flexDirection: 'column', gap: '4px', overflowY: 'auto' }}>
+                <nav style={{
+                    flex: 1,
+                    padding: '0 16px 20px 16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px',
+                    overflowY: 'auto'
+                }}>
                     {renderIndices(navItems)}
 
-                    {/* Spacer to push bottom items down */}
-                    <div style={{ flex: 1 }}></div>
-
-                    {/* Divider */}
-                    <div style={{
-                        height: '1px',
-                        background: 'var(--border)',
-                        margin: '8px 4px'
-                    }}></div>
-
-                    {/* Bottom Navigation */}
-                    {renderIndices(bottomNavItems)}
+                    {/* Bottom Navigation pushed to end */}
+                    <div style={{ marginTop: 'auto', paddingTop: '16px' }}>
+                        {/* Divider */}
+                        <div style={{
+                            height: '1px',
+                            background: 'var(--border)',
+                            margin: '8px 4px 16px 4px'
+                        }}></div>
+                        {renderIndices(bottomNavItems)}
+                    </div>
                 </nav>
             </aside>
         </>

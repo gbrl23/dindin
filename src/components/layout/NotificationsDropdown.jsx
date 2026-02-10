@@ -12,16 +12,11 @@ export default function NotificationsDropdown({ notifications, onAcceptInvite, o
 
     return (
         <div style={{
-            position: 'absolute',
-            top: '120%',
-            right: 0,
-            width: '320px',
+            width: '100%',
             background: '#FFFFFF',
             borderRadius: '16px',
-            boxShadow: 'var(--shadow-lg)',
-            padding: '12px',
+            padding: '4px',
             zIndex: 100,
-            border: '1px solid rgba(0,0,0,0.05)',
             maxHeight: '400px',
             overflowY: 'auto'
         }}>

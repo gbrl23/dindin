@@ -890,10 +890,128 @@ export default function AddTransactionView() {
                 )}
 
                 {/* Logic for group selector inside the card if enabled... keeping simple to match premium aesthetic */}
-                {isSplitEnabled && (
-                    <div className="animate-fade-in card" style={{ padding: '24px', borderRadius: '24px' }}>
-                        {/* Group logic rendered here if needed... skipping for visual polish step to keep code concise */}
-                        <p style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>Seleção de grupo / pagador aqui...</p>
+                {/* Group / Split Card */}
+                {type === 'expense' && isSplitEnabled && (
+                    <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+                        {/* 1. Group Selection */}
+                        <div className="card" style={{ padding: '20px', borderRadius: '24px' }}>
+                            <label style={{ fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: '12px', display: 'block' }}>Grupo</label>
+                            <div style={{ background: '#F8F8FA', borderRadius: '16px', padding: '4px 12px', border: '1px solid var(--border)' }}>
+                                <select
+                                    value={selectedGroupId}
+                                    onChange={e => setSelectedGroupId(e.target.value)}
+                                    style={{ width: '100%', height: '44px', background: 'transparent', border: 'none', fontSize: '1rem', fontWeight: '500', outline: 'none' }}
+                                >
+                                    <option value="">Sem grupo (Divisional Individual)</option>
+                                    {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* 2. Split Details */}
+                        <div className="card" style={{ padding: '24px', borderRadius: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <h3 style={{ fontSize: '1rem', fontWeight: '700' }}>Participantes</h3>
+                                <div style={{ display: 'flex', background: '#F2F2F7', padding: '4px', borderRadius: '10px' }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSplitMode('equal')}
+                                        style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: splitMode === 'equal' ? '#FFF' : 'transparent', fontSize: '0.75rem', fontWeight: '600' }}
+                                    >
+                                        Igual
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSplitMode('custom')}
+                                        style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: splitMode === 'custom' ? '#FFF' : 'transparent', fontSize: '0.75rem', fontWeight: '600' }}
+                                    >
+                                        Personalizado
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Profiles Grid */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {selectedProfiles.map(p => (
+                                    <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: '#F8F8FA', borderRadius: '16px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', opacity: p.isSelected ? 1 : 0.4 }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={p.isSelected}
+                                                onChange={() => toggleProfile(p.id)}
+                                                style={{ width: '20px', height: '20px', borderRadius: '6px' }}
+                                            />
+                                            <div style={{
+                                                width: '36px', height: '36px', borderRadius: '12px',
+                                                background: p.avatar_url ? `url(${p.avatar_url}) center/cover` : 'var(--primary)',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                color: '#FFF', fontSize: '0.9rem', fontWeight: '700'
+                                            }}>
+                                                {!p.avatar_url && p.name[0]}
+                                            </div>
+                                            <span style={{ fontSize: '0.9rem', fontWeight: '600' }}>{p.name} {p.isOwner && '(Eu)'}</span>
+                                        </div>
+
+                                        {p.isSelected && (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>R$</span>
+                                                <input
+                                                    type="text"
+                                                    value={p.share.toString().replace('.', ',')}
+                                                    readOnly={splitMode === 'equal'}
+                                                    onChange={(e) => {
+                                                        const val = parseFloat(e.target.value.replace(',', '.')) || 0;
+                                                        setSelectedProfiles(prev => prev.map(item =>
+                                                            item.id === p.id ? { ...item, share: val } : item
+                                                        ));
+                                                    }}
+                                                    style={{ width: '80px', padding: '8px', borderRadius: '8px', border: '1px solid var(--border)', textAlign: 'right', fontSize: '0.9rem', fontWeight: '700', background: splitMode === 'equal' ? 'transparent' : '#FFF' }}
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Payer Selection */}
+                            <div style={{ marginTop: '8px', paddingTop: '20px', borderTop: '1px solid var(--border)' }}>
+                                <label style={{ fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: '12px', display: 'block' }}>Quem pagou?</label>
+                                <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+                                    {selectedProfiles.filter(p => p.isSelected).map(p => (
+                                        <button
+                                            key={p.id}
+                                            type="button"
+                                            onClick={() => setPayerId(p.id)}
+                                            style={{
+                                                padding: '8px 16px', borderRadius: '12px',
+                                                border: payerId === p.id ? `2px solid var(--primary)` : '1px solid var(--border)',
+                                                background: payerId === p.id ? 'rgba(81, 0, 255, 0.05)' : '#FFF',
+                                                color: payerId === p.id ? 'var(--primary)' : 'var(--text-primary)',
+                                                fontSize: '0.85rem', fontWeight: '600', whiteSpace: 'nowrap',
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            {p.name}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Validation Message for Custom Split */}
+                            {splitMode === 'custom' && (
+                                <div style={{
+                                    padding: '12px', borderRadius: '12px',
+                                    background: Math.abs(numericAmount - selectedProfiles.reduce((acc, p) => acc + p.share, 0)) < 0.01 ? 'rgba(52, 199, 89, 0.1)' : 'rgba(255, 69, 58, 0.1)',
+                                    color: Math.abs(numericAmount - selectedProfiles.reduce((acc, p) => acc + p.share, 0)) < 0.01 ? 'var(--success)' : 'var(--danger)',
+                                    fontSize: '0.85rem', fontWeight: '600', textAlign: 'center'
+                                }}>
+                                    {Math.abs(numericAmount - selectedProfiles.reduce((acc, p) => acc + p.share, 0)) < 0.01
+                                        ? 'Divisão bate com o valor total!'
+                                        : `Restante: R$ ${(numericAmount - selectedProfiles.reduce((acc, p) => acc + p.share, 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
 

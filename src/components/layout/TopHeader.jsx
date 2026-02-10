@@ -181,11 +181,22 @@ export default function TopHeader({ onOpenNewTransaction }) {
                     </button>
 
                     {showNotifications && (
-                        <NotificationsDropdown
-                            notifications={notifications}
-                            onAcceptInvite={acceptGroupInvite}
-                            onClose={() => setShowNotifications(false)}
-                        />
+                        <div style={{
+                            position: 'absolute',
+                            top: '120%',
+                            right: 0,
+                            width: '320px',
+                            boxShadow: 'var(--shadow-lg)',
+                            borderRadius: '16px',
+                            border: '1px solid rgba(0,0,0,0.05)',
+                            zIndex: 100
+                        }}>
+                            <NotificationsDropdown
+                                notifications={notifications}
+                                onAcceptInvite={acceptGroupInvite}
+                                onClose={() => setShowNotifications(false)}
+                            />
+                        </div>
                     )}
                 </div>
 

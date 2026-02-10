@@ -89,20 +89,13 @@ export default function MainLayout({ children }) {
                                 </button>
 
                                 {/* App Logo & Name - Now Visible on Mobile Header */}
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <div style={{
-                                        width: 32, height: 32,
-                                        background: 'linear-gradient(135deg, var(--primary), #7000FF)',
-                                        borderRadius: '10px',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        color: '#fff',
-                                        boxShadow: '0 2px 8px rgba(81, 0, 255, 0.2)'
-                                    }}>
-                                        <Coins size={18} />
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <div style={{ color: 'var(--primary)', display: 'flex', alignItems: 'center' }}>
+                                        <Coins size={28} strokeWidth={2.5} />
                                     </div>
                                     <span style={{
                                         fontSize: '1.2rem',
-                                        fontWeight: '700',
+                                        fontWeight: '800',
                                         color: 'var(--text-primary)',
                                         letterSpacing: '-0.5px'
                                     }}>

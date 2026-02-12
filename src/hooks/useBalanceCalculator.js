@@ -48,7 +48,7 @@ export function useBalanceCalculator(transactions, myProfileId, selectedDate) {
 
         for (const tx of transactions) {
             // Considerar despesas e contas do mês selecionado
-            if (tx.type !== 'expense' && tx.type !== 'bill') continue;
+            if (tx.type !== 'expense' && tx.type !== 'bill' && tx.type !== 'investment') continue;
             if (!isInSelectedMonth(tx)) continue;
 
             const isMyPayment = tx.payer_id === myProfileId;

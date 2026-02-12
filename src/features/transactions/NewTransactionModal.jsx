@@ -1,152 +1,55 @@
 import React, { useState, useEffect } from 'react';
-import { X, Users, CreditCard, Repeat, Check, Calendar, User, Search, Plus, Upload, Target } from 'lucide-react';
-import { validateAmount, validateDescription, validateDate, validateAll, errorInputStyle, getErrorMessageStyle } from '../../utils/validation';
-import { useTransactions } from '../../hooks/useTransactions';
-import { useProfiles } from '../../hooks/useProfiles';
+import { X, Users, CreditCard, Repeat, Check, Calendar, Plus, Upload, Target, Search } from 'lucide-react';
+import { useTransactionForm } from './hooks/useTransactionForm';
 import { useCards } from '../../hooks/useCards';
 import { useGroups } from '../../hooks/useGroups';
 import { useCategories } from '../../hooks/useCategories';
-import { useAuth } from '../../contexts/AuthContext';
+import { useGoals } from '../../hooks/useGoals';
+import { useProfiles } from '../../hooks/useProfiles';
 import NewCategoryModal from '../categories/NewCategoryModal';
 import NewCardModal from '../cards/NewCardModal';
-import { useGoals } from '../../hooks/useGoals';
+import { hapticFeedback } from '../../utils/haptic';
 
 export default function NewTransactionModal({ onClose, onSuccess, initialType = 'expense' }) {
-    const { user } = useAuth();
-    const { profiles, addProfile } = useProfiles();
+    const {
+        type, setType,
+        amount, setAmount,
+        description, setDescription,
+        date, setDate,
+        selectedCategoryId, setSelectedCategoryId,
+        selectedGoalId, setSelectedGoalId,
+        cardId, setCardId,
+        payerId, setPayerId,
+        isRecurring, setIsRecurring,
+        installments, setInstallments,
+        isGroupTransaction, setIsGroupTransaction,
+        selectedGroupId, setSelectedGroupId,
+        splitMode, setSplitMode,
+        selectedProfiles, setSelectedProfiles,
+        customShares, setCustomShares,
+        competenceDate, setCompetenceDate,
+        isCompetenceManual, setIsCompetenceManual,
+        isSaving,
+        errors,
+        touched,
+        setTouched,
+        save,
+        handleAmountChange,
+        placeholder
+    } = useTransactionForm({ onSaveSuccess: () => { onSuccess?.(); onClose(); }, initialType });
+
     const { cards } = useCards();
-    const { groups, getGroupMembers } = useGroups();
-    const { addTransactionsBulk } = useTransactions();
-    const { categories, refreshCategories } = useCategories();
+    const { groups } = useGroups();
+    const { categories } = useCategories();
     const { goals } = useGoals();
 
-    // UI State
-    const [type, setType] = useState(initialType);
-    const [amount, setAmount] = useState('');
-    const [description, setDescription] = useState('');
-    // Helper: Format Date to YYYY-MM-DD using LOCAL timezone
-    const formatLocalDate = (d) => {
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${y}-${m}-${day}`;
-    };
-
-    const [date, setDate] = useState(formatLocalDate(new Date()));
-    const [selectedCategoryId, setSelectedCategoryId] = useState('');
-
-    // Filter categories by type
-    const availableCategories = categories.filter(c => c.type === type);
-
-    // Feature Toggles
-    const [isGroupTransaction, setIsGroupTransaction] = useState(false);
-    const [isRecurring, setIsRecurring] = useState(false);
     const [isCreatingCategory, setIsCreatingCategory] = useState(false);
     const [isCardModalOpen, setIsCardModalOpen] = useState(false);
-    const [isSaving, setIsSaving] = useState(false);
-    const [selectedGoalId, setSelectedGoalId] = useState('');
-
-    // Competence Logic
-    const [competenceDate, setCompetenceDate] = useState(formatLocalDate(new Date()));
-    const [isCompetenceManual, setIsCompetenceManual] = useState(false);
-
-    useEffect(() => {
-        if (isCompetenceManual || !user || profiles.length === 0) return;
-        const myProfile = profiles.find(p => p.user_id === user.id);
-        const startDay = myProfile?.financial_start_day || 1;
-        if (!date) return;
-
-        const [year, month, day] = date.split('-').map(Number);
-        const targetDate = new Date(year, month - 1, day);
-
-        if (startDay > 1 && day >= startDay) {
-            targetDate.setMonth(targetDate.getMonth() + 1);
-            targetDate.setDate(1);
-        } else {
-            targetDate.setDate(1);
-        }
-
-        // Format YYYY-MM-DD
-        const y = targetDate.getFullYear();
-        const m = String(targetDate.getMonth() + 1).padStart(2, '0');
-        const d = String(targetDate.getDate()).padStart(2, '0');
-        setCompetenceDate(`${y}-${m}-${d}`);
-    }, [date, user, profiles, isCompetenceManual]);
-
-    // Selectors
-    const [card, setCard] = useState('');
-    const [selectedGroupId, setSelectedGroupId] = useState('');
-    const [payerId, setPayerId] = useState('');
-
-    const [installments, setInstallments] = useState(1);
-    const [showRecurrenceOptions, setShowRecurrenceOptions] = useState(false);
-
-    // Validation State
-    const [errors, setErrors] = useState({});
-    const [touched, setTouched] = useState({});
-
-    // Group Logic
-    const [groupMembers, setGroupMembers] = useState([]);
-    const [isLoadingMembers, setIsLoadingMembers] = useState(false);
-    const [selectedProfiles, setSelectedProfiles] = useState([]);
-    const [splitMode, setSplitMode] = useState('equal'); // 'equal' | 'custom'
-    const [customShares, setCustomShares] = useState({}); // { [profileId]: string }
     const [participantSearch, setParticipantSearch] = useState('');
-    const [isSearchingExternal, setIsSearchingExternal] = useState(false);
+    const { addProfile } = useProfiles();
     const [file, setFile] = useState(null);
 
-    // Init Logic
-    useEffect(() => {
-        if (user && profiles.length > 0 && !payerId) {
-            const myProfile = profiles.find(p => p.user_id === user.id);
-            if (myProfile) setPayerId(myProfile.id);
-        }
-    }, [user, profiles, payerId]);
-
-    useEffect(() => {
-        if (type === 'bill') {
-            setIsRecurring(true);
-            setInstallments(1);
-        } else {
-            // Reset for other types to prevent accidental recurrence (e.g. Investment becoming 12 months)
-            setIsRecurring(false);
-            setInstallments(1);
-        }
-    }, [type]);
-
-    // Load Group Members when Group Selected
-    useEffect(() => {
-        if (selectedGroupId) {
-            setIsLoadingMembers(true);
-            getGroupMembers(selectedGroupId)
-                .then(members => {
-                    console.log("Fetched Members:", members); // Debug
-                    setGroupMembers(members);
-                    // Default: All selected
-                    setSelectedProfiles(members.map(m => ({ ...m, isSelected: true })));
-
-                    // Default Payer: Me
-                    const meInGroup = members.find(m => m.user_id === user?.id);
-                    if (meInGroup) setPayerId(meInGroup.id);
-                    else if (members.length > 0) setPayerId(members[0].id);
-                })
-                .catch(err => {
-                    console.error("Error loading group members:", err);
-                    setGroupMembers([]);
-                })
-                .finally(() => setIsLoadingMembers(false));
-        } else {
-            setGroupMembers([]);
-            if (profiles && profiles.length > 0) {
-                setSelectedProfiles(profiles.map(p => ({ ...p, isSelected: p.user_id === user?.id })));
-                const me = profiles.find(p => p.user_id === user?.id);
-                if (me) setPayerId(me.id);
-            } else {
-                setSelectedProfiles([]);
-            }
-            setIsLoadingMembers(false);
-        }
-    }, [selectedGroupId, user?.id, profiles]);
+    const availableCategories = categories.filter(c => c.type === type);
 
     const getThemeColor = (t = type) => {
         switch (t) {
@@ -158,856 +61,310 @@ export default function NewTransactionModal({ onClose, onSuccess, initialType = 
         }
     };
 
-    const getBgColor = (t = type) => {
-        return getThemeColor(t) + '20';
-    };
-
-    // Card Default Logic
-    useEffect(() => {
-        if (type === 'expense' && cards.length > 0 && !card) {
-            setCard(cards[0].id);
-        }
-    }, [type, cards, card]);
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-
-        // Validação
-        const validation = validateAll({
-            amount: validateAmount(amount),
-            description: validateDescription(description),
-            date: validateDate(date)
-        });
-
-        setErrors(validation.errors);
-        setTouched({ amount: true, description: true, date: true });
-
-        if (!validation.valid) {
-            return;
-        }
-
-        try {
-            setIsSaving(true);
-            const numericAmount = parseFloat(amount.replace(',', '.') || '0');
-
-            // Logic: 
-            // - If Recurring (Subscription): Generate 12 months ahead (default), Amount is full per month.
-            // - If Installments: Generate N months, Amount is Total/N.
-            // - Single: 1 month, Amount is Total.
-
-            let numInstallments = 1;
-            if (isRecurring) {
-                numInstallments = 12; // Default subscription horizon
-            } else if (type === 'expense' && installments > 1) {
-                numInstallments = parseInt(installments);
-            }
-
-            const installmentAmount = (type === 'expense' && !isRecurring && numInstallments > 1)
-                ? (numericAmount / numInstallments)
-                : numericAmount;
-
-            const newSeriesId = (numInstallments > 1 || isRecurring) ? crypto.randomUUID() : null;
-            const transactionsBatch = [];
-            const groupIdToUse = isGroupTransaction ? selectedGroupId : null;
-
-            // Parse date string directly - NO Date object for first transaction
-            // Input format is YYYY-MM-DD from HTML date input
-            const dateParts = date.split('-');
-            const baseYear = parseInt(dateParts[0], 10);
-            const baseMonth = parseInt(dateParts[1], 10); // 1-12
-            const baseDay = parseInt(dateParts[2], 10);
-
-            // Helper to format with padding
-            const pad = (n) => String(n).padStart(2, '0');
-
-            // Helper to add months to a date (returns YYYY-MM-DD string)
-            const addMonthsToDate = (y, m, d, monthsToAdd) => {
-                // Simple month arithmetic
-                let newMonth = m + monthsToAdd;
-                let newYear = y;
-                while (newMonth > 12) {
-                    newMonth -= 12;
-                    newYear++;
-                }
-                while (newMonth < 1) {
-                    newMonth += 12;
-                    newYear--;
-                }
-                return { year: newYear, month: newMonth, day: d };
-            };
-
-            for (let i = 0; i < numInstallments; i++) {
-                // Calculate date for this installment
-                const { year: txYear, month: txMonth, day: txDay } = addMonthsToDate(baseYear, baseMonth, baseDay, i);
-                const txDateStr = `${txYear}-${pad(txMonth)}-${pad(txDay)}`;
-
-                let invoiceDate = null;
-                if (type === 'expense' && card) {
-                    const selectedCard = cards.find(c => c.id === card);
-                    if (selectedCard && selectedCard.closing_day) {
-                        // Regra: dia < fechamento → fatura do mês atual
-                        //        dia >= fechamento → fatura do mês seguinte
-                        let invMonth = txMonth;
-                        let invYear = txYear;
-                        if (txDay >= selectedCard.closing_day) {
-                            invMonth++;
-                            if (invMonth > 12) { invMonth = 1; invYear++; }
-                        }
-                        invoiceDate = `${invYear}-${pad(invMonth)}-01`;
-                    }
-                }
-
-                let sharesData = [];
-                if (isGroupTransaction && selectedGroupId) {
-                    const activeMembers = selectedProfiles.filter(p => p.isSelected);
-                    const count = activeMembers.length;
-                    if (count > 0) {
-                        let sharesCalculated = [];
-                        if (splitMode === 'custom') {
-                            sharesCalculated = activeMembers.map(m => {
-                                const rawVal = customShares[m.id];
-                                let val = 0;
-                                if (rawVal) val = parseFloat(rawVal.replace(',', '.') || '0');
-
-                                // For installments, we divide the TOTAL custom amount by installments?
-                                // User Agreement: "input amounts will be treated as the Total Share... divide this amount by numInstallments"
-                                const valPerInstallment = isRecurring ? val : (val / numInstallments); // If recurring, it's that amount EVERY month. If installments, split it.
-
-                                return {
-                                    profile_id: m.id,
-                                    share_amount: valPerInstallment,
-                                    paid: m.id === payerId
-                                };
-                            });
-                        } else {
-                            const splitVal = installmentAmount / count;
-                            sharesCalculated = activeMembers.map(m => ({
-                                profile_id: m.id,
-                                share_amount: splitVal,
-                                paid: m.id === payerId
-                            }));
-                        }
-                        sharesData = sharesCalculated;
-                    }
-                }
-
-                // Get Category Name
-                const selectedCategoryObj = categories.find(c => c.id === selectedCategoryId);
-                const categoryName = selectedCategoryObj ? selectedCategoryObj.name : (type === 'bill' ? 'Conta' : 'Geral');
-
-                // Calculate Competence Date for THIS specific installment/recurrence
-                let itemCompetenceDate = null;
-                const myProfile = profiles.find(p => p.user_id === user?.id);
-                if (myProfile) {
-                    const sDay = myProfile.financial_start_day || 1;
-                    // Use the date of this specific installment (txDateStr)
-                    const [tY, tM, tD] = txDateStr.split('-').map(Number);
-                    const tDateObj = new Date(tY, tM - 1, tD);
-
-                    if (sDay > 1 && tD >= sDay) {
-                        tDateObj.setMonth(tDateObj.getMonth() + 1);
-                        tDateObj.setDate(1);
-                    } else {
-                        tDateObj.setDate(1);
-                    }
-                    const cy = tDateObj.getFullYear();
-                    const cm = String(tDateObj.getMonth() + 1).padStart(2, '0');
-                    const cd = String(tDateObj.getDate()).padStart(2, '0');
-                    itemCompetenceDate = `${cy}-${cm}-${cd}`;
-                }
-
-                transactionsBatch.push({
-                    amount: installmentAmount,
-                    description: description + ((numInstallments > 1 && !isRecurring) ? ` (${i + 1}/${numInstallments})` : ''),
-                    date: txDateStr,
-                    invoice_date: invoiceDate,
-                    payer_id: payerId,
-                    card_id: (type === 'expense') ? card : null,
-                    category: categoryName,
-                    category_id: selectedCategoryId || null,
-                    type: type,
-                    shares: sharesData,
-                    series_id: newSeriesId,
-                    group_id: groupIdToUse,
-                    goal_id: (type === 'investment' && selectedGoalId) ? selectedGoalId : null,
-                    competence_date: itemCompetenceDate || competenceDate // Fallback if calc fails, but calc should work
-                });
-            }
-
-            console.warn('DEBUG: Saving Batch', {
-                count: transactionsBatch.length,
-                seriesId: newSeriesId,
-                firstDate: transactionsBatch[0]?.date,
-                firstInvoice: transactionsBatch[0]?.invoice_date,
-                isRecurring,
-                numInstallments
-            });
-
-            await addTransactionsBulk(transactionsBatch);
-            if (onSuccess) onSuccess();
-            onClose();
-        } catch (error) {
-            console.error(error);
-            alert('Erro: ' + error.message);
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    // Check mobile
     const isMobileModal = typeof window !== 'undefined' && window.innerWidth <= 480;
 
+    useEffect(() => {
+        const handleEscape = (e) => {
+            if (e.key === 'Escape') onClose();
+        };
+        window.addEventListener('keydown', handleEscape);
+        return () => window.removeEventListener('keydown', handleEscape);
+    }, [onClose]);
+
     return (
-        <div style={{
-            position: 'fixed', inset: 0, zIndex: 1000,
-            background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)',
-            display: 'flex', alignItems: isMobileModal ? 'flex-end' : 'center', justifyContent: 'center',
-            padding: isMobileModal ? '0' : '20px'
-        }}>
-            <style>{`
-                .custom-scroll::-webkit-scrollbar { width: 6px; }
-                .custom-scroll::-webkit-scrollbar-track { background: transparent; }
-                .custom-scroll::-webkit-scrollbar-thumb { background: #E5E5EA; border-radius: 10px; }
-                .custom-scroll::-webkit-scrollbar-thumb:hover { background: #D1D1D6; }
-            `}</style>
-
-            <div style={{ position: 'relative', width: '100%', maxWidth: isMobileModal ? '100%' : '480px' }}>
-
-                {/* Card */}
-                <div className="card animate-fade-in custom-scroll" style={{
+        <div
+            onClick={(e) => { e.stopPropagation(); onClose(); }}
+            style={{
+                position: 'fixed', inset: 0, zIndex: 3000,
+                background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(12px)',
+                display: 'flex', alignItems: isMobileModal ? 'flex-end' : 'center', justifyContent: 'center',
+                cursor: 'pointer'
+            }}
+        >
+            {/* Safety Margin Wrapper: Clicks within this padding won't close the modal */}
+            <div
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                    padding: isMobileModal ? '0' : '40px',
+                    display: 'flex',
+                    alignItems: isMobileModal ? 'flex-end' : 'center',
+                    justifyContent: 'center',
                     width: '100%',
-                    background: 'var(--bg-card)',
-                    boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
-                    borderRadius: isMobileModal ? '24px 24px 0 0' : '24px',
-                    padding: isMobileModal ? '20px 16px 32px' : '32px',
-                    position: 'relative',
-                    maxHeight: isMobileModal ? '90vh' : '85vh',
-                    overflowY: 'auto'
-                }}>
-                    {/* Close Button - Inside Modal */}
-                    <button
-                        onClick={onClose}
-                        style={{
-                            position: 'absolute',
-                            right: '16px',
-                            top: '16px',
-                            background: 'var(--bg-secondary)',
-                            border: 'none',
-                            cursor: 'pointer',
-                            color: 'var(--text-secondary)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            width: '36px',
-                            height: '36px',
-                            borderRadius: '50%',
-                            zIndex: 20
-                        }}
-                    >
-                        <X size={20} />
-                    </button>
-
-                    <h2 style={{ fontSize: isMobileModal ? '1.1rem' : '1.25rem', fontWeight: '700', marginBottom: '24px', textAlign: 'center', paddingRight: '40px' }}>Nova Movimentação</h2>
-
-                    {/* Segmented Control */}
-                    <div style={{
-                        background: 'var(--bg-secondary)',
-                        padding: '4px',
-                        borderRadius: '12px',
-                        display: 'flex',
-                        marginBottom: '32px'
+                    maxWidth: isMobileModal ? '100%' : '560px',
+                    cursor: 'default'
+                }}
+            >
+                <div style={{ position: 'relative', width: '100%', maxWidth: isMobileModal ? '100%' : '480px' }}>
+                    <div className="card animate-fade-in custom-scroll" style={{
+                        width: '100%',
+                        background: 'var(--bg-card)',
+                        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+                        borderRadius: isMobileModal ? '28px 28px 0 0' : '28px',
+                        padding: isMobileModal ? '24px 20px 40px' : '32px',
+                        position: 'relative',
+                        maxHeight: isMobileModal ? '92vh' : '85vh',
+                        overflowY: 'auto',
+                        scrollbarGutter: 'stable',
+                        border: '1px solid rgba(255,255,255,0.1)'
                     }}>
-                        {['expense', 'income', 'bill', 'investment'].map(t => {
-                            const isActive = type === t;
-                            const labels = { expense: 'Despesa', income: 'Receita', bill: 'Conta', investment: 'Investir' };
-                            return (
+                        <button onClick={onClose} style={{ position: 'absolute', right: '16px', top: '16px', background: 'var(--bg-secondary)', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '36px', borderRadius: '50%', zIndex: 20 }}>
+                            <X size={20} />
+                        </button>
+
+                        <h2 style={{ fontSize: '1.25rem', fontWeight: '800', marginBottom: '24px', textAlign: 'center', letterSpacing: '-0.5px' }}>Nova Movimentação</h2>
+
+                        {/* Selector de Tipo */}
+                        <div style={{ background: 'var(--bg-secondary)', padding: '4px', borderRadius: '16px', display: 'flex', marginBottom: '32px' }}>
+                            {['expense', 'income', 'bill', 'investment'].map(t => (
                                 <button
                                     key={t}
                                     onClick={() => setType(t)}
                                     style={{
-                                        flex: 1,
-                                        padding: '8px',
-                                        borderRadius: '10px',
-                                        border: 'none',
-                                        background: isActive ? '#FFFFFF' : 'transparent',
-                                        color: isActive ? getThemeColor(t) : 'var(--text-secondary)',
-                                        fontWeight: isActive ? '600' : '500',
-                                        fontSize: '0.9rem',
-                                        boxShadow: isActive ? '0 2px 4px rgba(0,0,0,0.08)' : 'none',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s cubic-bezier(0.2, 0, 0, 1)'
+                                        flex: 1, padding: '10px', borderRadius: '12px', border: 'none',
+                                        background: type === t ? '#FFFFFF' : 'transparent',
+                                        color: type === t ? getThemeColor(t) : 'var(--text-secondary)',
+                                        fontWeight: type === t ? '700' : '600',
+                                        fontSize: '0.85rem',
+                                        boxShadow: type === t ? '0 4px 12px rgba(0,0,0,0.1)' : 'none',
+                                        cursor: 'pointer', transition: 'all 0.3s ease'
                                     }}
                                 >
-                                    {labels[t]}
+                                    {{ expense: 'Despesa', income: 'Receita', bill: 'Conta', investment: 'Investir' }[t]}
                                 </button>
-                            );
-                        })}
-                    </div>
-
-                    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-
-                        {/* Amount - Centered Everything */}
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                            <label style={{ fontSize: '0.85rem', color: touched.amount && errors.amount ? '#FF3B30' : 'var(--text-secondary)', fontWeight: '500', marginBottom: '8px' }}>Valor</label>
-
-                            {/* Centered Wrapper */}
-                            <div style={{
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%',
-                                padding: '8px 16px', borderRadius: '12px',
-                                border: touched.amount && errors.amount ? '2px solid #FF3B30' : '2px solid transparent',
-                                background: touched.amount && errors.amount ? 'rgba(255, 59, 48, 0.05)' : 'transparent'
-                            }}>
-                                <span style={{ fontSize: isMobileModal ? '1.5rem' : '2rem', fontWeight: '600', color: getThemeColor(), lineHeight: 1 }}>R$</span>
-                                <input
-                                    type="text"
-                                    inputMode="decimal"
-                                    value={amount}
-                                    onChange={(e) => {
-                                        setAmount(e.target.value.replace(/[^0-9.,]/g, ''));
-                                        if (errors.amount) setErrors(prev => ({ ...prev, amount: null }));
-                                    }}
-                                    onBlur={() => setTouched(prev => ({ ...prev, amount: true }))}
-                                    placeholder="0,00"
-                                    autoFocus
-                                    style={{
-                                        fontSize: isMobileModal ? '2rem' : '2.5rem', fontWeight: '700',
-                                        border: 'none', background: 'transparent',
-                                        width: isMobileModal ? '140px' : '180px',
-                                        textAlign: 'center',
-                                        color: 'var(--text-primary)',
-                                        outline: 'none',
-                                        padding: 0
-                                    }}
-                                />
-                            </div>
-                            {touched.amount && errors.amount && (
-                                <span style={{ color: '#FF3B30', fontSize: '0.75rem', marginTop: '6px', fontWeight: '500' }}>{errors.amount}</span>
-                            )}
+                            ))}
                         </div>
 
-                        {/* Category Selector */}
-                        <div style={{ padding: '0 8px' }}>
-                            <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600', marginBottom: '8px', display: 'block' }}>Categoria</label>
-                            <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '8px', scrollbarWidth: 'none', alignItems: 'flex-start' }}>
+                        <form onSubmit={(e) => { e.preventDefault(); save(); }} style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
 
-                                {/* Add Button */}
-                                <button
-                                    type="button"
-                                    onClick={() => setIsCreatingCategory(true)}
-                                    style={{
-                                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
-                                        background: 'transparent', border: 'none', cursor: 'pointer',
-                                        minWidth: '56px'
-                                    }}
-                                >
-                                    <div style={{
-                                        width: '44px', height: '44px', borderRadius: '16px',
-                                        background: 'var(--bg-secondary)', border: '2px dashed var(--border)',
-                                        color: 'var(--primary)',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                    }}>
-                                        <Plus size={20} />
-                                    </div>
-                                    <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: '500' }}>Nova</span>
-                                </button>
-
-                                {availableCategories.map(cat => (
-                                    <button
-                                        key={cat.id}
-                                        type="button"
-                                        onClick={() => setSelectedCategoryId(cat.id)}
-                                        style={{
-                                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
-                                            background: 'transparent', border: 'none', cursor: 'pointer',
-                                            opacity: selectedCategoryId === cat.id ? 1 : 0.5,
-                                            transform: selectedCategoryId === cat.id ? 'scale(1.1)' : 'scale(1)',
-                                            transition: 'all 0.2s',
-                                            minWidth: '56px'
-                                        }}
-                                    >
-                                        <div style={{
-                                            width: '44px', height: '44px', borderRadius: '16px',
-                                            background: selectedCategoryId === cat.id ? cat.color : 'var(--bg-secondary)',
-                                            color: selectedCategoryId === cat.id ? '#FFF' : 'var(--text-secondary)',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            fontSize: '1.2rem'
-                                        }}>
-                                            {cat.icon}
-                                        </div>
-                                        <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: selectedCategoryId === cat.id ? '700' : '500', whiteSpace: 'nowrap' }}>{cat.name}</span>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Competence Date (Manual Override) */}
-                        {(type === 'income' || type === 'investment') && (
-                            <div style={{ padding: '0 8px' }}>
-                                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600', marginBottom: '8px', display: 'block' }}>Mês de Competência</label>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <div style={{ position: 'relative', flex: 1 }}>
-                                        <Calendar size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
-                                        <input
-                                            type="date"
-                                            value={competenceDate}
-                                            onChange={e => {
-                                                setCompetenceDate(e.target.value);
-                                                setIsCompetenceManual(true);
-                                            }}
-                                            style={{
-                                                width: '100%', padding: '10px 10px 10px 36px',
-                                                borderRadius: '12px', border: '1px solid var(--border)',
-                                                background: 'var(--bg-secondary)', fontSize: '0.85rem', fontWeight: '500',
-                                                outline: 'none'
-                                            }}
-                                        />
-                                    </div>
-                                    {isCompetenceManual && (
-                                        <button
-                                            type="button"
-                                            onClick={() => setIsCompetenceManual(false)}
-                                            style={{ border: 'none', background: 'transparent', color: 'var(--primary)', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer' }}
-                                        >
-                                            Resetar
-                                        </button>
-                                    )}
+                            {/* Valor Input Premium */}
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px 24px', borderRadius: '20px', background: getThemeColor() + '08' }}>
+                                    <span style={{ fontSize: '1.75rem', fontWeight: '800', color: getThemeColor() }}>R$</span>
+                                    <input
+                                        type="text" inputMode="numeric" value={amount}
+                                        onChange={handleAmountChange}
+                                        placeholder="0,00" autoFocus
+                                        style={{ fontSize: '2.5rem', fontWeight: '800', border: 'none', background: 'transparent', width: '180px', textAlign: 'center', color: 'var(--text-primary)', outline: 'none' }}
+                                    />
                                 </div>
+                                {touched.amount && errors.amount && <span style={{ color: '#FF3B30', fontSize: '0.75rem', marginTop: '8px', fontWeight: '600' }}>{errors.amount}</span>}
                             </div>
-                        )}
 
-                        {/* Goal Selector for Investments */}
-                        {type === 'investment' && goals.length > 0 && (
-                            <div style={{ padding: '0 8px' }}>
-                                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600', marginBottom: '8px', display: 'block' }}>Vincular a uma Meta</label>
-                                <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
-                                    <button
-                                        type="button"
-                                        onClick={() => setSelectedGoalId('')}
-                                        style={{
-                                            padding: '8px 12px', borderRadius: '12px', border: selectedGoalId === '' ? '2px solid var(--primary)' : '1px solid var(--border)',
-                                            background: selectedGoalId === '' ? 'rgba(81, 0, 255, 0.05)' : 'var(--bg-secondary)',
-                                            fontSize: '0.8rem', fontWeight: '600', color: selectedGoalId === '' ? 'var(--primary)' : 'var(--text-secondary)',
-                                            cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s'
-                                        }}
-                                    >
-                                        Sem Meta
+                            {/* Categorias Horizontal Scroll */}
+                            <div>
+                                <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '12px', display: 'block' }}>Categoria</label>
+                                <div style={{ display: 'flex', gap: '14px', overflowX: 'auto', paddingBottom: '8px', scrollbarWidth: 'none' }}>
+                                    <button type="button" onClick={() => setIsCreatingCategory(true)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', background: 'transparent', border: 'none', minWidth: '64px' }}>
+                                        <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: 'var(--bg-secondary)', border: '2px dashed var(--border)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Plus size={20} /></div>
+                                        <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: '600' }}>Nova</span>
                                     </button>
-                                    {goals.map(goal => (
-                                        <button
-                                            key={goal.id}
-                                            type="button"
-                                            onClick={() => setSelectedGoalId(goal.id)}
-                                            style={{
-                                                padding: '8px 12px', borderRadius: '12px', border: selectedGoalId === goal.id ? `2px solid ${goal.color}` : '1px solid var(--border)',
-                                                background: selectedGoalId === goal.id ? `${goal.color}15` : 'var(--bg-secondary)',
-                                                fontSize: '0.8rem', fontWeight: '600', color: selectedGoalId === goal.id ? goal.color : 'var(--text-secondary)',
-                                                cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s'
-                                            }}
-                                        >
-                                            <Target size={14} />
-                                            {goal.name}
+                                    {availableCategories.map(cat => (
+                                        <button key={cat.id} type="button" onClick={() => {
+                                            setSelectedCategoryId(cat.id);
+                                            hapticFeedback('light');
+                                        }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', background: 'transparent', border: 'none', minWidth: '64px', opacity: selectedCategoryId === cat.id ? 1 : 0.4, transform: selectedCategoryId === cat.id ? 'scale(1.1)' : 'scale(1)', transition: '0.2s' }}>
+                                            <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: selectedCategoryId === cat.id ? cat.color : 'var(--bg-secondary)', color: selectedCategoryId === cat.id ? '#FFF' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem' }}>{cat.icon}</div>
+                                            <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: selectedCategoryId === cat.id ? '700' : '600' }}>{cat.name}</span>
                                         </button>
                                     ))}
                                 </div>
                             </div>
-                        )}
 
-                        {/* Description & Date */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '12px' }}>
-                            <div style={{
-                                background: 'var(--bg-secondary)', borderRadius: '12px', padding: '12px 16px',
-                                border: touched.description && errors.description ? '2px solid #FF3B30' : '2px solid transparent'
-                            }}>
-                                <label style={{ fontSize: '0.75rem', color: touched.description && errors.description ? '#FF3B30' : 'var(--text-secondary)', fontWeight: '600', marginBottom: '4px', display: 'block' }}>Descrição</label>
-                                <input
-                                    value={description}
-                                    onChange={e => {
-                                        setDescription(e.target.value);
-                                        if (errors.description) setErrors(prev => ({ ...prev, description: null }));
-                                    }}
-                                    onBlur={() => setTouched(prev => ({ ...prev, description: true }))}
-                                    placeholder="Ex: Mercado..."
-                                    maxLength={100}
-                                    style={{ border: 'none', background: 'transparent', fontSize: '0.95rem', outline: 'none', width: '100%', padding: 0 }}
-                                />
-                                {touched.description && errors.description && (
-                                    <span style={{ color: '#FF3B30', fontSize: '0.7rem', marginTop: '4px', display: 'block', fontWeight: '500' }}>{errors.description}</span>
-                                )}
-                            </div>
-                            <div style={{ background: 'var(--bg-secondary)', borderRadius: '12px', padding: '12px 16px' }}>
-                                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600', marginBottom: '4px', display: 'block' }}>Data</label>
-                                <input
-                                    type="date"
-                                    min="2000-01-01"
-                                    max="2099-12-31"
-                                    value={date}
-                                    onChange={e => {
-                                        const value = e.target.value;
-                                        const year = parseInt(value.split('-')[0]);
-                                        if (year && (year < 2000 || year > 2099)) return;
-                                        setDate(value);
-                                    }}
-                                    style={{ border: 'none', background: 'transparent', fontSize: '0.95rem', outline: 'none', width: '100%', padding: 0, fontFamily: 'inherit' }}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Attachment */}
-                        <div style={{ padding: '0 8px' }}>
-                            <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600', marginBottom: '8px', display: 'block' }}>Anexo (Opcional)</label>
-                            <div style={{ position: 'relative' }}>
-                                <input
-                                    type="file"
-                                    id="modal-file-upload"
-                                    onChange={(e) => {
-                                        if (e.target.files[0]) setFile(e.target.files[0].name);
-                                    }}
-                                    style={{ display: 'none' }}
-                                />
-                                <label
-                                    htmlFor="modal-file-upload"
-                                    style={{
-                                        display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '12px 16px', borderRadius: '12px',
-                                        background: 'var(--bg-secondary)', border: '1px dashed var(--border)', cursor: 'pointer',
-                                        color: file ? 'var(--primary)' : 'var(--text-tertiary)', fontSize: '0.85rem', fontWeight: '500', transition: 'all 0.2s'
-                                    }}
-                                >
-                                    <Upload size={16} />
-                                    {file ? file : 'Comprovante ou foto'}
-                                </label>
-                                {file && (
-                                    <button
-                                        type="button"
-                                        onClick={() => setFile(null)}
-                                        style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'transparent', color: 'var(--text-tertiary)', cursor: 'pointer' }}
-                                    >
-                                        <X size={14} />
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Group Toggle */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <div style={{ padding: '6px', background: 'var(--bg-secondary)', borderRadius: '8px' }}><Users size={16} color="var(--primary)" /></div>
-                                <span style={{ fontSize: '0.9rem', fontWeight: '500' }}>Dividir em Grupo</span>
-                            </div>
-                            <label className="switch">
-                                <input
-                                    type="checkbox"
-                                    checked={isGroupTransaction}
-                                    onChange={(e) => setIsGroupTransaction(e.target.checked)}
-                                />
-                                <span className="slider"></span>
-                            </label>
-                        </div>
-
-                        {/* GROUP UI (Expanded) */}
-                        {isGroupTransaction && (
-                            <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '16px', background: '#F8F8FA', padding: '16px', borderRadius: '16px', border: '1px solid var(--border)' }}>
-                                {/* Group/Payer/Members Logic Same as Before - Abbreviated for brevity if unchanged logic is huge, but I must keep it. I will keep it. */}
-                                <div>
-                                    <label style={{ fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: '8px', display: 'block' }}>Grupo</label>
-                                    <div style={{ background: 'var(--bg-card)', borderRadius: '12px', padding: '0 12px', height: '44px', display: 'flex', alignItems: 'center', border: '1px solid var(--border)' }}>
-                                        <select
-                                            value={selectedGroupId}
-                                            onChange={e => setSelectedGroupId(e.target.value)}
-                                            style={{ width: '100%', background: 'transparent', border: 'none', fontSize: '0.9rem', outline: 'none' }}
-                                        >
-                                            <option value="">Selecione o Grupo...</option>
-                                            {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-                                        </select>
-                                    </div>
+                            {/* Campos de Texto */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '16px' }}>
+                                <div style={{ background: 'var(--bg-secondary)', borderRadius: '16px', padding: '14px 18px' }}>
+                                    <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '4px', display: 'block' }}>Descrição</label>
+                                    <input value={description} onChange={e => setDescription(e.target.value)} placeholder={placeholder} style={{ border: 'none', background: 'transparent', fontSize: '1rem', outline: 'none', width: '100%', fontWeight: '500' }} />
+                                    {touched.description && errors.description && <span style={{ color: '#FF3B30', fontSize: '0.65rem', fontWeight: '600' }}>{errors.description}</span>}
                                 </div>
-                                {isGroupTransaction && (
-                                    <>
-                                        <div>
-                                            <label style={{ fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: '8px', display: 'block' }}>Quem pagou?</label>
-                                            <div style={{ background: 'var(--bg-card)', borderRadius: '12px', padding: '0 12px', height: '44px', display: 'flex', alignItems: 'center', border: '1px solid var(--border)' }}>
-                                                <select
-                                                    value={payerId}
-                                                    onChange={e => setPayerId(e.target.value)}
-                                                    style={{ width: '100%', background: 'transparent', border: 'none', fontSize: '0.9rem', outline: 'none' }}
-                                                >
-                                                    {selectedProfiles.map(m => (
-                                                        <option key={m.id} value={m.id}>{m.full_name || m.email || 'Membro sem nome'} {m.user_id === user?.id ? '(Eu)' : ''}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                                <label style={{ fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>Participantes</label>
-                                                <button type="button" onClick={() => setSelectedProfiles(prev => prev.map(p => ({ ...p, isSelected: !prev.some(x => x.isSelected) })))} style={{ fontSize: '0.75rem', color: 'var(--primary)', border: 'none', background: 'transparent', cursor: 'pointer', fontWeight: '600' }}>
-                                                    {selectedProfiles.some(p => p.isSelected) ? 'Desmarcar todos' : 'Marcar todos'}
-                                                </button>
-                                            </div>
-
-                                            {/* Split Mode Toggle */}
-                                            <div style={{ display: 'flex', background: 'var(--bg-card)', padding: '2px', borderRadius: '8px', marginBottom: '8px', border: '1px solid var(--border)' }}>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setSplitMode('equal')}
-                                                    style={{ flex: 1, padding: '4px', borderRadius: '6px', border: 'none', background: splitMode === 'equal' ? 'var(--bg-secondary)' : 'transparent', color: splitMode === 'equal' ? 'var(--text-primary)' : 'var(--text-secondary)', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer' }}
-                                                >
-                                                    Igual
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setSplitMode('custom')}
-                                                    style={{ flex: 1, padding: '4px', borderRadius: '6px', border: 'none', background: splitMode === 'custom' ? 'var(--bg-secondary)' : 'transparent', color: splitMode === 'custom' ? 'var(--text-primary)' : 'var(--text-secondary)', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer' }}
-                                                >
-                                                    Personalizado
-                                                </button>
-                                            </div>
-
-                                            {splitMode === 'custom' && (
-                                                <div style={{
-                                                    marginBottom: '12px',
-                                                    padding: '8px 12px',
-                                                    background: 'var(--bg-secondary)',
-                                                    borderRadius: '10px',
-                                                    display: 'flex',
-                                                    justifyContent: 'space-between',
-                                                    alignItems: 'center',
-                                                    fontSize: '0.8rem'
-                                                }}>
-                                                    <span style={{ color: 'var(--text-secondary)' }}>Restante:</span>
-                                                    <span style={{
-                                                        fontWeight: '700',
-                                                        color: (parseFloat(amount.replace(',', '.')) || 0) - Object.values(customShares).reduce((acc, v) => acc + (parseFloat(v.replace(',', '.')) || 0), 0) === 0 ? 'var(--success)' : 'var(--danger)'
-                                                    }}>
-                                                        R$ {((parseFloat(amount.replace(',', '.')) || 0) - Object.values(customShares).reduce((acc, v) => acc + (parseFloat(v.replace(',', '.')) || 0), 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                    </span>
-                                                </div>
-                                            )}
-
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto', paddingRight: '4px' }}>
-                                                {isLoadingMembers ? (
-                                                    <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                                                        <div className="spinner" style={{ marginBottom: '8px' }}></div>
-                                                        Carregando membros...
-                                                    </div>
-                                                ) : selectedProfiles.length === 0 ? (
-                                                    <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                                                        Nenhum membro encontrado neste grupo.
-                                                    </div>
-                                                ) : selectedProfiles.map(m => {
-                                                    const isSelected = m.isSelected;
-                                                    const isExternal = !groupMembers.find(gm => gm.id === m.id);
-                                                    const nameDisplay = m.full_name || m.email || '?';
-                                                    const initials = nameDisplay.substring(0, 2).toUpperCase();
-
-                                                    // Custom Share Input Logic
-                                                    const customValue = customShares[m.id] || '';
-
-                                                    return (
-                                                        <div key={m.id} style={{ padding: '8px 12px', borderRadius: '12px', background: 'var(--bg-card)', border: isSelected ? '1px solid var(--primary)' : '1px solid var(--border)', transition: 'all 0.2s' }}>
-                                                            <div
-                                                                onClick={() => { setSelectedProfiles(prev => prev.map(p => p.id === m.id ? { ...p, isSelected: !p.isSelected } : p)); }}
-                                                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', marginBottom: (isSelected && splitMode === 'custom') ? '8px' : '0' }}
-                                                            >
-                                                                <div style={{ width: 32, height: 32, borderRadius: '50%', background: isExternal ? 'var(--bg-secondary)' : 'var(--primary)', opacity: isExternal ? 1 : 0.1, color: isExternal ? 'var(--text-secondary)' : 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: '700', position: 'relative' }}>
-                                                                    {initials}
-                                                                    {!isExternal && <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'var(--primary)', opacity: 0.1 }}></div>}
-                                                                </div>
-                                                                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                                    <span style={{ fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-primary)' }}>
-                                                                        {nameDisplay} {m.user_id === user?.id && <span style={{ color: 'var(--text-tertiary)', fontSize: '0.8rem' }}>(Eu)</span>}
-                                                                    </span>
-                                                                    {isExternal && <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', fontWeight: '600', textTransform: 'uppercase' }}>Externo</span>}
-                                                                </div>
-                                                                <div style={{ width: 20, height: 20, borderRadius: '6px', border: isSelected ? 'none' : '2px solid var(--border)', background: isSelected ? 'var(--primary)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{isSelected && <Check size={14} color="#fff" />}</div>
-                                                            </div>
-
-                                                            {isSelected && splitMode === 'custom' && (
-                                                                <div className="animate-fade-in" style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '44px' }}>
-                                                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>R$</span>
-                                                                    <input
-                                                                        type="text"
-                                                                        placeholder="0,00"
-                                                                        value={customValue}
-                                                                        onChange={(e) => {
-                                                                            const val = e.target.value.replace(/[^0-9.,]/g, '');
-                                                                            setCustomShares(prev => ({ ...prev, [m.id]: val }));
-                                                                        }}
-                                                                        onClick={(e) => e.stopPropagation()}
-                                                                        style={{
-                                                                            width: '100%', border: '1px solid var(--border)', borderRadius: '8px', padding: '6px', fontSize: '0.9rem', background: 'var(--bg-secondary)', outline: 'none'
-                                                                        }}
-                                                                    />
-                                                                </div>
-                                                            )}
-                                                        </div>
-
-                                                    );
-                                                })}
-                                            </div>
-
-                                            {/* External Participant Search */}
-
-                                            <div style={{ marginTop: '12px', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
-                                                {!isSearchingExternal ? (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setIsSearchingExternal(true)}
-                                                        style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '8px 12px', borderRadius: '12px', border: '1px dashed var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontSize: '0.85rem', cursor: 'pointer' }}
-                                                    >
-                                                        <Plus size={16} />
-                                                        Adicionar pessoa fora do grupo
-                                                    </button>
-                                                ) : (
-                                                    <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                                        <div style={{ position: 'relative' }}>
-                                                            <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
-                                                            <input
-                                                                autoFocus
-                                                                type="text"
-                                                                placeholder="Buscar por nome..."
-                                                                value={participantSearch}
-                                                                onChange={e => setParticipantSearch(e.target.value)}
-                                                                style={{ width: '100%', padding: '8px 12px 8px 36px', borderRadius: '12px', border: '1px solid var(--primary)', background: 'var(--bg-card)', fontSize: '0.9rem', outline: 'none' }}
-                                                            />
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => { setIsSearchingExternal(false); setParticipantSearch(''); }}
-                                                                style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'transparent', color: 'var(--text-tertiary)', cursor: 'pointer' }}
-                                                            >
-                                                                <X size={14} />
-                                                            </button>
-                                                        </div>
-
-                                                        {participantSearch.length > 0 && (
-                                                            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', maxHeight: '120px', overflowY: 'auto', boxShadow: 'var(--shadow-md)' }}>
-                                                                {profiles
-                                                                    .filter(p => (p.full_name || p.name || '').toLowerCase().includes(participantSearch.toLowerCase()) && !selectedProfiles.find(sp => sp.id === p.id))
-                                                                    .map(p => (
-                                                                        <div
-                                                                            key={p.id}
-                                                                            onClick={() => {
-                                                                                setSelectedProfiles(prev => [...prev, { ...p, isSelected: true }]);
-                                                                                setIsSearchingExternal(false);
-                                                                                setParticipantSearch('');
-                                                                            }}
-                                                                            style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-light)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem' }}
-                                                                        >
-                                                                            <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem' }}>{p.name?.charAt(0).toUpperCase() || 'U'}</div>
-                                                                            {p.name || 'Usuário'}
-                                                                        </div>
-                                                                    ))}
-                                                                <div
-                                                                    onClick={async () => {
-                                                                        const name = participantSearch.trim();
-                                                                        if (!name) return;
-                                                                        try {
-                                                                            const newProfile = await addProfile(name);
-                                                                            if (newProfile) {
-                                                                                setSelectedProfiles(prev => [...prev, { ...newProfile, isSelected: true }]);
-                                                                                setIsSearchingExternal(false);
-                                                                                setParticipantSearch('');
-                                                                            }
-                                                                        } catch (e) {
-                                                                            console.error("Erro ao criar perfil fantasma:", e);
-                                                                        }
-                                                                    }}
-                                                                    style={{ padding: '8px 12px', color: 'var(--primary)', fontWeight: '600', fontSize: '0.85rem', cursor: 'pointer', borderTop: '1px solid var(--border-light)' }}
-                                                                >
-                                                                    + Criar "{participantSearch}" como novo perfil
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </>
-                                )}
+                                <div style={{ background: 'var(--bg-secondary)', borderRadius: '16px', padding: '14px 18px' }}>
+                                    <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '4px', display: 'block' }}>Data</label>
+                                    <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ border: 'none', background: 'transparent', fontSize: '0.95rem', outline: 'none', width: '100%', fontWeight: '500' }} />
+                                </div>
                             </div>
-                        )}
 
-                        {/* Card Selection */}
-                        {type === 'expense' && (
-                            <div style={{ background: 'var(--bg-secondary)', borderRadius: '12px', padding: '12px 16px' }}>
-                                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600', marginBottom: '4px', display: 'block' }}>Cartão de Crédito</label>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <CreditCard size={18} color="var(--text-secondary)" />
-                                    <div style={{ display: 'flex', gap: '8px', flex: 1 }}>
-                                        <select
-                                            value={card}
-                                            onChange={(e) => {
-                                                if (e.target.value === 'new') {
-                                                    setIsCardModalOpen(true);
-                                                    return;
-                                                }
-                                                setCard(e.target.value);
-                                            }}
-                                            style={{ flex: 1, background: 'transparent', border: 'none', fontSize: '0.95rem', outline: 'none' }}
-                                        >
-                                            {cards.length === 0 && <option value="">Nenhum cartão cadastrado</option>}
-                                            {cards.length > 0 && <option value="">Selecione...</option>}
+                            {/* Opções Avançadas */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                {/* Cartão (Apenas Despesa) */}
+                                {type === 'expense' && (
+                                    <div style={{ background: 'var(--bg-secondary)', borderRadius: '16px', padding: '14px 18px' }}>
+                                        <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '4px', display: 'block' }}>Cartão</label>
+                                        <select value={cardId} onChange={e => setCardId(e.target.value)} style={{ width: '100%', border: 'none', background: 'transparent', fontSize: '1rem', outline: 'none', fontWeight: '500' }}>
+                                            <option value="">Carteira / Dinheiro</option>
                                             {cards.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                            <option value="new" style={{ fontWeight: 'bold', color: 'var(--primary)' }}>+ Adicionar Novo Cartão</option>
                                         </select>
                                     </div>
-                                </div>
-                            </div>
-                        )}
+                                )}
 
-                        {/* Recurrence */}
-                        {type === 'expense' && (
-                            <div style={{ marginTop: '8px' }}>
-                                <button type="button" onClick={() => setShowRecurrenceOptions(!showRecurrenceOptions)} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'transparent', border: 'none', color: isRecurring || installments > 1 ? 'var(--primary)' : 'var(--text-secondary)', cursor: 'pointer', fontWeight: '500', fontSize: '0.85rem' }}>
-                                    <Repeat size={16} />
-                                    {isRecurring ? 'Assinatura Mensal' : (installments > 1 ? `Parcelado em ${installments}x` : 'Repetir / Parcelar')}
-                                </button>
-                                {showRecurrenceOptions && (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '12px' }}>
-                                        <button type="button" onClick={() => { setIsRecurring(false); }} style={{ padding: '6px 12px', borderRadius: '8px', background: !isRecurring ? 'var(--primary)' : 'var(--bg-secondary)', color: !isRecurring ? '#fff' : 'var(--text-secondary)', border: 'none', fontSize: '0.8rem' }}>Parcelas</button>
-                                        <button type="button" onClick={() => { setIsRecurring(true); setInstallments(1); }} style={{ padding: '6px 12px', borderRadius: '8px', background: isRecurring ? 'var(--primary)' : 'var(--bg-secondary)', color: isRecurring ? '#fff' : 'var(--text-secondary)', border: 'none', fontSize: '0.8rem' }}>Recorrente</button>
-                                        {!isRecurring && (
-                                            <input type="number" min="2" max="24" value={installments} onChange={e => setInstallments(e.target.value)} style={{ width: '60px', padding: '6px', borderRadius: '8px', border: '1px solid var(--border)', textAlign: 'center' }} />
-                                        )}
+                                {/* Toggles */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                    {/* Dividir em Parcelas (Apenas Despesa) */}
+                                    {type === 'expense' && !isRecurring && (
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px', background: 'var(--bg-secondary)', borderRadius: '14px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                <div style={{ padding: '8px', background: 'var(--bg-card)', borderRadius: '10px' }}><Repeat size={18} color="var(--primary)" /></div>
+                                                <span style={{ fontSize: '0.9rem', fontWeight: '600' }}>Parcelar</span>
+                                            </div>
+                                            <input type="number" min="1" max="48" value={installments} onChange={e => setInstallments(parseInt(e.target.value))} style={{ width: '50px', padding: '6px', borderRadius: '8px', border: '1px solid var(--border)', textAlign: 'center', fontWeight: '700' }} />
+                                        </div>
+                                    )}
+
+                                    {/* Recorrência Mensal */}
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px', background: 'var(--bg-secondary)', borderRadius: '14px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            <div style={{ padding: '8px', background: 'var(--bg-card)', borderRadius: '10px' }}><Repeat size={18} color="var(--primary)" /></div>
+                                            <span style={{ fontSize: '0.9rem', fontWeight: '600' }}>Recorrência Mensal</span>
+                                        </div>
+                                        <label className="switch">
+                                            <input type="checkbox" checked={isRecurring} onChange={e => {
+                                                setIsRecurring(e.target.checked);
+                                                hapticFeedback('light');
+                                            }} />
+                                            <span className="slider"></span>
+                                        </label>
+                                    </div>
+
+                                    {/* Dividir com Grupo */}
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px', background: 'var(--bg-secondary)', borderRadius: '14px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            <div style={{ padding: '8px', background: 'var(--bg-card)', borderRadius: '10px' }}><Users size={18} color="var(--primary)" /></div>
+                                            <span style={{ fontSize: '0.9rem', fontWeight: '600' }}>Dividir com Grupo</span>
+                                        </div>
+                                        <label className="switch">
+                                            <input type="checkbox" checked={isGroupTransaction} onChange={e => {
+                                                setIsGroupTransaction(e.target.checked);
+                                                hapticFeedback('light');
+                                            }} />
+                                            <span className="slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                {/* Seleção de Grupo e Participantes */}
+                                {isGroupTransaction && (
+                                    <div style={{ background: 'var(--bg-secondary)', borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                        <div>
+                                            <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '4px', display: 'block' }}>Qual Grupo?</label>
+                                            <select value={selectedGroupId} onChange={e => setSelectedGroupId(e.target.value)} style={{ width: '100%', border: 'none', background: 'transparent', fontSize: '1rem', outline: 'none', fontWeight: '500' }}>
+                                                <option value="">Sem grupo</option>
+                                                {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                                            </select>
+                                        </div>
+
+                                        {/* Modo de Divisão */}
+                                        <div style={{ display: 'flex', gap: '8px', background: 'rgba(0,0,0,0.05)', padding: '4px', borderRadius: '12px' }}>
+                                            {['equal', 'custom'].map(m => (
+                                                <button
+                                                    key={m} type="button" onClick={() => setSplitMode(m)}
+                                                    style={{
+                                                        flex: 1, padding: '8px', borderRadius: '10px', border: 'none',
+                                                        background: splitMode === m ? '#FFF' : 'transparent',
+                                                        color: splitMode === m ? 'var(--primary)' : 'var(--text-secondary)',
+                                                        fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer',
+                                                        boxShadow: splitMode === m ? '0 2px 6px rgba(0,0,0,0.05)' : 'none'
+                                                    }}
+                                                >
+                                                    {m === 'equal' ? 'Igual' : 'Manual'}
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        {/* Busca/Adição de Perfil Externo */}
+                                        <div style={{ position: 'relative' }}>
+                                            <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
+                                            <input
+                                                placeholder="Adicionar externa..."
+                                                value={participantSearch}
+                                                onChange={e => setParticipantSearch(e.target.value)}
+                                                onKeyDown={async (e) => {
+                                                    if (e.key === 'Enter' && participantSearch.trim()) {
+                                                        e.preventDefault();
+                                                        try {
+                                                            const p = await addProfile(participantSearch.trim());
+                                                            if (p) {
+                                                                setSelectedProfiles(prev => [...prev.map(item => ({ ...item, isSelected: item.isSelected })), { ...p, isSelected: true, isOwner: false }]);
+                                                                setParticipantSearch('');
+                                                            }
+                                                        } catch (err) { }
+                                                    }
+                                                }}
+                                                style={{ width: '100%', padding: '10px 10px 10px 34px', borderRadius: '10px', background: 'var(--bg-card)', border: '1px solid var(--border-light)', fontSize: '0.85rem', outline: 'none' }}
+                                            />
+                                        </div>
+
+                                        {/* Lista Mini de Participantes */}
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                            <label style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-secondary)' }}>Participantes</label>
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <button type="button" onClick={() => setSelectedProfiles(prev => prev.map(p => ({ ...p, isSelected: true })))} style={{ background: 'transparent', border: 'none', color: 'var(--primary)', fontSize: '0.7rem', fontWeight: '700', cursor: 'pointer' }}>Marcar todos</button>
+                                                <button type="button" onClick={() => setSelectedProfiles(prev => prev.map(p => ({ ...p, isSelected: false })))} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', fontSize: '0.7rem', fontWeight: '700', cursor: 'pointer' }}>Nenhum</button>
+                                            </div>
+                                        </div>
+
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '200px', overflowY: 'auto', paddingRight: '4px' }} className="custom-scroll">
+                                            {selectedProfiles.length === 0 && (
+                                                <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>Nenhum participante encontrado</div>
+                                            )}
+                                            {selectedProfiles.map(profile => (
+                                                <div key={profile.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px', borderRadius: '12px', background: profile.isSelected ? 'var(--bg-card)' : 'transparent', border: `1px solid ${profile.isSelected ? 'var(--border-light)' : 'transparent'}`, opacity: profile.isSelected ? 1 : 0.5, cursor: 'pointer' }} onClick={() => {
+                                                    setSelectedProfiles(prev => prev.map(p => p.id === profile.id ? { ...p, isSelected: !p.isSelected } : p));
+                                                }}>
+                                                    <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: profile.isOwner ? 'var(--primary)' : '#CCC', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '800' }}>{profile.name?.substring(0, 1).toUpperCase()}</div>
+                                                    <div style={{ flex: 1, fontSize: '0.85rem', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{profile.name}</div>
+
+                                                    {splitMode === 'custom' && profile.isSelected && (
+                                                        <div onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '2px', background: 'var(--bg-secondary)', padding: '2px 6px', borderRadius: '6px' }}>
+                                                            <span style={{ fontSize: '0.7rem', fontWeight: '800' }}>R$</span>
+                                                            <input
+                                                                value={customShares[profile.id] || ''}
+                                                                onChange={e => {
+                                                                    const val = e.target.value.replace(/[^\d,]/g, '');
+                                                                    setCustomShares(prev => ({ ...prev, [profile.id]: val }));
+                                                                }}
+                                                                placeholder="0,00"
+                                                                style={{ width: '50px', border: 'none', background: 'transparent', outline: 'none', fontSize: '0.8rem', fontWeight: '700', textAlign: 'right' }}
+                                                            />
+                                                        </div>
+                                                    )}
+
+                                                    <div style={{ width: '18px', height: '18px', borderRadius: '6px', border: `2px solid ${profile.isSelected ? 'var(--primary)' : 'var(--border)'}`, background: profile.isSelected ? 'var(--primary)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                        {profile.isSelected && <Check size={12} color="#FFF" />}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
                                 )}
                             </div>
-                        )}
 
-                        <button
-                            type="submit"
-                            disabled={isSaving}
-                            style={{
-                                padding: '16px', borderRadius: '16px', background: isSaving ? '#ccc' : getThemeColor(), color: '#fff', border: 'none', fontSize: '1rem', fontWeight: '600', marginTop: '8px', cursor: isSaving ? 'not-allowed' : 'pointer', boxShadow: `0 4px 12px ${getBgColor()}`, transition: 'transform 0.1s', opacity: isSaving ? 0.7 : 1
-                            }}
-                            onMouseDown={e => !isSaving && (e.currentTarget.style.transform = 'scale(0.98)')}
-                            onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
-                        >
-                            {isSaving ? 'Salvando...' : 'Salvar Transação'}
-                        </button>
-                    </form>
+                            <button
+                                type="submit"
+                                disabled={isSaving}
+                                onClick={() => hapticFeedback('medium')}
+                                style={{
+                                    background: getThemeColor(),
+                                    color: '#FFF',
+                                    border: 'none',
+                                    padding: '18px',
+                                    borderRadius: '20px',
+                                    fontSize: '1.1rem',
+                                    fontWeight: '800',
+                                    cursor: 'pointer',
+                                    boxShadow: `0 12px 24px ${getThemeColor()}30`,
+                                    transition: 'all 0.3s ease',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px',
+                                    marginTop: '10px'
+                                }}
+                            >
+                                {isSaving ? 'Salvando...' : <><Check size={22} /> Confirmar Lançamento</>}
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
 
-            {isCreatingCategory && (
-                <NewCategoryModal
-                    type={type}
-                    onSuccess={refreshCategories}
-                    onClose={() => setIsCreatingCategory(false)}
-                />
-            )}
-
-            {isCardModalOpen && (
-                <NewCardModal
-                    onClose={() => setIsCardModalOpen(false)}
-                    onSuccess={(newCard) => {
-                        // Handle update
-                        if (newCard) {
-                            // If array (from fetch) or single obj
-                            const cardId = Array.isArray(newCard) ? newCard[0]?.id : newCard.id;
-                            if (cardId) setCard(cardId);
-                        }
-                    }}
-                />
-            )}
+            {isCreatingCategory && <NewCategoryModal type={type} onClose={() => setIsCreatingCategory(false)} onCreated={() => { }} />}
+            {isCardModalOpen && <NewCardModal onClose={() => setIsCardModalOpen(false)} onCreated={(c) => setCardId(c.id)} />}
         </div>
     );
 }
-

@@ -358,10 +358,13 @@ export default function ImportInvoiceModal({ isOpen, onClose }) {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             padding: '16px', backdropFilter: 'blur(4px)'
         }}>
-            <div className="card" style={{
+            <div className="card custom-scroll" style={{
                 width: '100%', maxWidth: '500px',
                 background: 'var(--bg-card)', border: '1px solid var(--border)',
-                animation: 'slideUp 0.3s ease-out'
+                animation: 'slideUp 0.3s ease-out',
+                overflowY: 'auto',
+                maxHeight: '85vh',
+                scrollbarGutter: 'stable'
             }}>
                 {/* Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
@@ -524,7 +527,7 @@ export default function ImportInvoiceModal({ isOpen, onClose }) {
                             </button>
                         </div>
 
-                        <div style={{ flex: 1, overflowY: 'auto', marginBottom: '16px', maxHeight: '400px' }}>
+                        <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', marginBottom: '16px', maxHeight: '400px', scrollbarGutter: 'stable' }}>
                             {parsedItems.map(item => (
                                 <div
                                     key={item.id}

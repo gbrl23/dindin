@@ -1,7 +1,17 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useCards } from '../hooks/useCards';
 
-const DashboardContext = createContext();
+const DashboardContext = createContext({
+    selectedDate: new Date(),
+    setSelectedDate: () => { },
+    handlePrevMonth: () => { },
+    handleNextMonth: () => { },
+    handleSetToday: () => { },
+    isTransactionModalOpen: false,
+    openTransactionModal: () => { },
+    closeTransactionModal: () => { },
+    modalType: 'expense'
+});
 
 export function DashboardProvider({ children }) {
     // Smart Initial Date Logic
@@ -18,17 +28,17 @@ export function DashboardProvider({ children }) {
         return today;
     };
 
-    const [selectedDate, setSelectedDate] = useState(getSmartInitialDate);
+    const [selectedDate, setSelectedDate] = useState(getSmartInitialDate());
 
     // Modal State
     const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
     const [modalType, setModalType] = useState('expense'); // expense, income, investment, bill
 
-    const { cards } = useCards();
+    const { cards = [] } = useCards() || {};
 
     // Auto-advance logic (sync with cards if loaded later)
     useEffect(() => {
-        if (cards.length > 0) {
+        if (cards && Array.isArray(cards) && cards.length > 0) {
             const today = new Date();
             const currentDay = today.getDate();
             const latestClosingDay = cards.reduce((max, card) => Math.max(max, card.closing_day || 1), 1);
@@ -85,5 +95,6 @@ export function DashboardProvider({ children }) {
 }
 
 export function useDashboard() {
-    return useContext(DashboardContext);
+    const context = useContext(DashboardContext);
+    return context || {};
 }

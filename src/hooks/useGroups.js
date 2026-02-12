@@ -207,7 +207,8 @@ export function useGroups() {
         }
     };
 
-    const getGroupMembers = async (groupId) => {
+    const getGroupMembers = useCallback(async (groupId) => {
+        if (!groupId) return [];
         try {
             // 1. Get Member IDs
             const { data: members, error: membersError } = await supabase
@@ -218,10 +219,10 @@ export function useGroups() {
             if (membersError) throw membersError;
             if (!members || members.length === 0) return [];
 
-            const userIds = members.map(m => m.user_id);
+            const userIds = members.map(m => m.user_id).filter(Boolean);
 
             // 2. Get Profiles for these IDs
-            const { data: profiles, error: profilesError } = await supabase
+            const { data: profileList, error: profilesError } = await supabase
                 .from('profiles')
                 .select('id, user_id, full_name, email, avatar_url')
                 .in('user_id', userIds);
@@ -230,8 +231,8 @@ export function useGroups() {
 
             // 3. Merge Data
             const merged = members.map(m => {
-                const profile = profiles.find(p => p.user_id === m.user_id);
-                if (!profile) return null; // Should not happen if fixed
+                const profile = profileList.find(p => p.user_id === m.user_id);
+                if (!profile) return null;
                 return {
                     ...profile,
                     name: profile.full_name || profile.email || 'Usuário',
@@ -245,7 +246,7 @@ export function useGroups() {
             console.error("Error getting group members", err);
             return [];
         }
-    };
+    }, []);
 
     return {
         groups,

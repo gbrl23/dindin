@@ -16,13 +16,15 @@ import { useProfiles } from '../../hooks/useProfiles';
 import { useCards } from '../../hooks/useCards';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { CreditCard, Wallet, TrendingUp, FileText, ArrowUp, ArrowDown, CheckCircle, Edit2, ChevronLeft, ChevronRight, Users } from 'lucide-react';
+import { CreditCard, Wallet, TrendingUp, FileText, ArrowUp, ArrowDown, CheckCircle, Edit2, ChevronLeft, ChevronRight, Users, PieChart } from 'lucide-react';
 import { useDashboard } from '../../contexts/DashboardContext';
 import CumulativeLineChart from '../../components/CumulativeLineChart';
 import IncomeModal from './IncomeModal';
 import { parseLocalDate, displayDate } from '../../utils/dateUtils';
 import { useBalanceCalculator } from '../../hooks/useBalanceCalculator';
 import DindinTip from '../../components/common/DindinTip';
+import CategoryPieChart from '../../components/CategoryPieChart';
+import { hapticFeedback } from '../../utils/haptic';
 
 export default function DashboardView() {
     const navigate = useNavigate();
@@ -31,7 +33,7 @@ export default function DashboardView() {
     const { selectedDate, openTransactionModal } = useDashboard();
 
     const { transactions, fetchTransactions } = useTransactions();
-    const { profiles, updateProfile, loading: loadingProfiles } = useProfiles();
+    const { profiles, myProfile, updateProfile, loading: loadingProfiles } = useProfiles();
     const { cards } = useCards();
 
     // UI state
@@ -39,8 +41,7 @@ export default function DashboardView() {
     const [balanceCardView, setBalanceCardView] = useState(0); // 0 = A Receber, 1 = A Pagar
 
     // Derived Data
-    const myProfile = profiles.find(p => p.user_id === user?.id);
-    const monthlyIncome = myProfile?.monthly_income; // Can be null, undefined, or number
+    const monthlyIncome = myProfile?.monthly_income; // Can be string or number
 
     useEffect(() => {
         fetchTransactions();
@@ -80,28 +81,26 @@ export default function DashboardView() {
 
         const totalIncome = currentMonthTxs
             .filter(t => t.type === 'income')
-            .reduce((acc, t) => acc + t.amount, 0);
+            .reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
 
         // Calculate split balances
-        // Note: Assuming useBalanceCalculator results are derived here manually or via logic to stay inside useMemo
-        // For simplicity, I'll calculate myExpenses directly based on myProfile and currentMonthTxs
         const myExpensesTotal = currentMonthTxs
             .filter(t => t.type === 'expense' || t.type === 'investment')
             .reduce((acc, t) => {
+                const amount = Number(t.amount) || 0;
                 if (!t.share_type || t.share_type === 'equal') {
-                    // This is simplified, in a real app we'd use the logic from useBalanceCalculator
-                    // But since we want it inside useMemo for performance, we re-evaluate
                     const myId = myProfile?.id;
                     const participants = t.participants || [];
                     if (participants.length === 0 || participants.includes(myId) || t.user_id === user?.id) {
                         const shareCount = participants.length || 1;
-                        return acc + (t.amount / shareCount);
+                        return acc + (amount / shareCount);
                     }
                 }
                 return acc;
             }, 0);
 
-        const balance = ((parseFloat(monthlyIncome) || 0) + totalIncome) - myExpensesTotal;
+        const income = parseFloat(monthlyIncome) || 0;
+        const balance = (income + totalIncome) - myExpensesTotal;
 
         // Burn Rate logic: total expenses divided by passed days
         let daysPassed = 1;
@@ -137,13 +136,14 @@ export default function DashboardView() {
     const finalTotalAPagar = balanceDetails.totalAPagar;
     const finalNetBalance = balanceDetails.netBalance;
     const finalMyExpenses = balanceDetails.myExpenses;
-    const finalBalance = ((parseFloat(monthlyIncome) || 0) + totalIncome) - finalMyExpenses;
+    const incomeBase = parseFloat(monthlyIncome) || 0;
+    const finalBalance = (incomeBase + totalIncome) - finalMyExpenses;
     const finalBurnRate = finalMyExpenses / (selectedDate.getMonth() === new Date().getMonth() ? new Date().getDate() : new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).getDate());
 
     const cardInvoices = useMemo(() => cards.map(c => {
         const cardTotal = monthlyTransactions
             .filter(t => t.card_id === c.id && t.type === 'expense')
-            .reduce((acc, t) => acc + t.amount, 0);
+            .reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
         return { ...c, total: cardTotal };
     }), [cards, monthlyTransactions]);
 
@@ -215,7 +215,10 @@ export default function DashboardView() {
 
                         {/* Balance (Clickable to Edit Income) */}
                         <div className="card hover-scale"
-                            onClick={() => setIsIncomeModalOpen(true)}
+                            onClick={() => {
+                                setIsIncomeModalOpen(true);
+                                hapticFeedback('light');
+                            }}
                             style={{
                                 padding: isMobile ? '16px' : '24px',
                                 display: 'flex',
@@ -438,6 +441,12 @@ export default function DashboardView() {
                     <div className="card" style={{ padding: '0', overflow: 'hidden', border: 'none' }}>
                         <div style={{ padding: isMobile ? '16px' : '24px 32px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-card)' }}>
                             <h3 style={{ fontSize: '1.1rem', fontWeight: '700' }}>Extrato Recente</h3>
+                            <button
+                                onClick={() => navigate('/transactions')}
+                                style={{ background: 'transparent', border: 'none', color: 'var(--primary)', fontWeight: '700', fontSize: '0.9rem', cursor: 'pointer' }}
+                            >
+                                Ver tudo
+                            </button>
                         </div>
 
                         {isMobile ? (
@@ -449,13 +458,17 @@ export default function DashboardView() {
                                     </div>
                                 ) : (
                                     monthlyTransactions.slice(0, 10).map(t => (
-                                        <div key={t.id} style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            padding: '12px 16px',
-                                            gap: '12px',
-                                            borderBottom: '1px solid var(--border-light)'
-                                        }}>
+                                        <div key={t.id}
+                                            onClick={() => navigate(`/edit-transaction/${t.id}`)}
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                padding: '16px',
+                                                gap: '12px',
+                                                borderBottom: '1px solid var(--border-light)',
+                                                cursor: 'pointer'
+                                            }}
+                                        >
                                             {/* Ícone */}
                                             <div style={{
                                                 width: 36, height: 36, borderRadius: '10px',
@@ -514,7 +527,11 @@ export default function DashboardView() {
                                             </tr>
                                         ) : (
                                             monthlyTransactions.slice(0, 10).map(t => (
-                                                <tr key={t.id} style={{ borderBottom: '1px solid var(--border-light)', transition: 'background 0.2s' }} className="hover:bg-gray-50">
+                                                <tr key={t.id}
+                                                    onClick={() => navigate(`/edit-transaction/${t.id}`)}
+                                                    style={{ borderBottom: '1px solid var(--border-light)', transition: 'background 0.2s', cursor: 'pointer' }}
+                                                    className="hover:bg-gray-50"
+                                                >
                                                     <td style={{ padding: '16px 32px' }}>
                                                         <div style={{
                                                             width: 40, height: 40, borderRadius: '12px',
@@ -546,6 +563,16 @@ export default function DashboardView() {
                             </div>
                         )}
                     </div>
+
+                    {/* Category Distribution Widget - Moved to Main Column */}
+                    <div style={{ marginTop: '32px' }}>
+                        <h3 style={{ fontSize: '1rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                            <PieChart size={18} /> Gastos por Categoria
+                        </h3>
+                        <div className="card" style={{ padding: '24px' }}>
+                            <CategoryPieChart transactions={monthlyTransactions} />
+                        </div>
+                    </div>
                 </div>
 
                 {/* RIGHT COLUMN (Sidebar) */}
@@ -564,7 +591,10 @@ export default function DashboardView() {
                                 </div>
                             ) : (
                                 cardInvoices.map(card => (
-                                    <div key={card.id} className="card" style={{ padding: '20px', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '12px' }} onClick={() => navigate(`/card-invoice/${card.id}`)}>
+                                    <div key={card.id} className="card" style={{ padding: '20px', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '12px' }} onClick={() => {
+                                        navigate(`/card-invoice/${card.id}`);
+                                        hapticFeedback('medium');
+                                    }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                 <CreditCard size={20} color="var(--primary)" />
@@ -580,6 +610,7 @@ export default function DashboardView() {
                             )}
                         </div>
                     </div>
+
 
                     {/* Upcoming Bills Widget */}
                     <div>

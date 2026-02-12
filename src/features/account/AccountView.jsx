@@ -19,6 +19,9 @@ export default function AccountView() {
 
     // Profile
     const [profileName, setProfileName] = useState(user?.user_metadata?.full_name || '');
+    const [profilePhone, setProfilePhone] = useState('');
+    const [profileBirthDate, setProfileBirthDate] = useState('');
+    const [profileBio, setProfileBio] = useState('');
     const [avatarUrl, setAvatarUrl] = useState(null);
     const [financialStartDay, setFinancialStartDay] = useState(1);
     const [salary, setSalary] = useState('');
@@ -33,14 +36,16 @@ export default function AccountView() {
         const fetchProfile = async () => {
             const { data } = await supabase
                 .from('profiles')
-                .select('avatar_url, financial_start_day, monthly_income')
+                .select('avatar_url, financial_start_day, monthly_income, phone, birth_date, bio')
                 .eq('user_id', user.id)
                 .single();
             if (data) {
                 if (data.avatar_url) setAvatarUrl(data.avatar_url);
                 if (data.financial_start_day) setFinancialStartDay(data.financial_start_day);
-                // Use monthly_income alias as salary for UI
                 if (data.monthly_income) setSalary(data.monthly_income.toString().replace('.', ','));
+                if (data.phone) setProfilePhone(data.phone);
+                if (data.birth_date) setProfileBirthDate(data.birth_date);
+                if (data.bio) setProfileBio(data.bio);
             }
         };
         if (user?.id) fetchProfile();
@@ -63,7 +68,12 @@ export default function AccountView() {
 
             const { error: profileError } = await supabase
                 .from('profiles')
-                .update({ full_name: profileName })
+                .update({
+                    full_name: profileName,
+                    phone: profilePhone,
+                    birth_date: profileBirthDate || null,
+                    bio: profileBio
+                })
                 .eq('user_id', user.id);
             if (profileError) throw profileError;
 
@@ -114,7 +124,8 @@ export default function AccountView() {
                 .from('profiles')
                 .update({
                     financial_start_day: financialStartDay,
-                    monthly_income: numericSalary
+                    monthly_income: numericSalary,
+                    salary: numericSalary
                 })
                 .eq('user_id', user.id);
 
@@ -575,16 +586,54 @@ export default function AccountView() {
                             background: 'var(--bg-secondary)',
                             borderTop: '1px solid var(--border)'
                         }}>
-                            <div style={{ marginBottom: '16px' }}>
-                                <label style={{ display: 'block', color: 'var(--text-secondary)', marginBottom: '8px', fontSize: '0.9rem' }}>
-                                    Nome Completo
-                                </label>
-                                <input
-                                    className="input"
-                                    value={profileName}
-                                    onChange={e => setProfileName(e.target.value)}
-                                    placeholder="Seu nome completo"
-                                />
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '16px' }}>
+                                <div>
+                                    <label style={{ display: 'block', color: 'var(--text-secondary)', marginBottom: '8px', fontSize: '0.9rem' }}>
+                                        Nome Completo
+                                    </label>
+                                    <input
+                                        className="input"
+                                        value={profileName}
+                                        onChange={e => setProfileName(e.target.value)}
+                                        placeholder="Seu nome completo"
+                                    />
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                    <div>
+                                        <label style={{ display: 'block', color: 'var(--text-secondary)', marginBottom: '8px', fontSize: '0.9rem' }}>
+                                            Telefone
+                                        </label>
+                                        <input
+                                            className="input"
+                                            value={profilePhone}
+                                            onChange={e => setProfilePhone(e.target.value)}
+                                            placeholder="(00) 0 0000-0000"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: 'block', color: 'var(--text-secondary)', marginBottom: '8px', fontSize: '0.9rem' }}>
+                                            Nascimento
+                                        </label>
+                                        <input
+                                            type="date"
+                                            className="input"
+                                            value={profileBirthDate}
+                                            onChange={e => setProfileBirthDate(e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', color: 'var(--text-secondary)', marginBottom: '8px', fontSize: '0.9rem' }}>
+                                        Bio / Sobre você
+                                    </label>
+                                    <textarea
+                                        className="input"
+                                        style={{ height: '80px', paddingTop: '12px', resize: 'none' }}
+                                        value={profileBio}
+                                        onChange={e => setProfileBio(e.target.value)}
+                                        placeholder="Conte um pouco sobre você..."
+                                    />
+                                </div>
                             </div>
                             <button
                                 type="submit"

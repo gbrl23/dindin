@@ -71,7 +71,7 @@ export default function CreateGroupModal({ isOpen, onClose }) {
             overflowY: 'auto'
         }} onClick={isMobile ? undefined : onClose}>
             <div
-                className={isMobile ? '' : 'card animate-scale-in'}
+                className={isMobile ? 'custom-scroll' : 'card animate-scale-in custom-scroll'}
                 style={{
                     width: isMobile ? '100%' : '90%',
                     maxWidth: isMobile ? 'none' : '400px',
@@ -79,7 +79,10 @@ export default function CreateGroupModal({ isOpen, onClose }) {
                     padding: isMobile ? '16px' : '24px',
                     paddingTop: isMobile ? '0' : '24px',
                     minHeight: isMobile ? '100vh' : 'auto',
-                    borderRadius: isMobile ? '0' : '24px'
+                    borderRadius: isMobile ? '0' : '24px',
+                    overflowY: 'auto',
+                    maxHeight: isMobile ? 'none' : '90vh',
+                    scrollbarGutter: 'stable'
                 }}
                 onClick={e => e.stopPropagation()}
             >

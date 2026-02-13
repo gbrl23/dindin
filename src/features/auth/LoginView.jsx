@@ -75,9 +75,12 @@ export default function LoginView() {
 
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <div>
-                        <label style={{ display: 'block', color: 'var(--text-secondary)', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', paddingLeft: '4px' }}>Email</label>
+                        <label htmlFor="email" style={{ display: 'block', color: 'var(--text-secondary)', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', paddingLeft: '4px' }}>Email</label>
                         <input
+                            id="email"
+                            name="email"
                             type="email"
+                            autoComplete="username email"
                             className="input"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
@@ -87,9 +90,12 @@ export default function LoginView() {
                         />
                     </div>
                     <div>
-                        <label style={{ display: 'block', color: 'var(--text-secondary)', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', paddingLeft: '4px' }}>Senha</label>
+                        <label htmlFor="password" style={{ display: 'block', color: 'var(--text-secondary)', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600', paddingLeft: '4px' }}>Senha</label>
                         <input
+                            id="password"
+                            name="password"
                             type="password"
+                            autoComplete="current-password"
                             className="input"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}

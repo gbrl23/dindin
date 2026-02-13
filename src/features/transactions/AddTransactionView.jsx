@@ -12,6 +12,7 @@ import { useIsMobile } from '../../hooks/useIsMobile';
 import NewCategoryModal from '../categories/NewCategoryModal';
 import NewCardModal from '../cards/NewCardModal';
 import SeriesActionModal from '../../components/SeriesActionModal';
+import { hapticFeedback } from '../../utils/haptic';
 import { supabase } from '../../supabaseClient';
 
 export default function AddTransactionView() {
@@ -64,6 +65,7 @@ export default function AddTransactionView() {
     const [participantSearch, setParticipantSearch] = useState('');
     const [isSearchingExternal, setIsSearchingExternal] = useState(false);
     const [file, setFile] = useState(null);
+    const availableCategories = categories.filter(c => c.type === type);
 
     useEffect(() => {
         fetchTransactions();
@@ -114,7 +116,10 @@ export default function AddTransactionView() {
                 <div style={{ background: 'var(--bg-secondary)', padding: '5px', borderRadius: '18px', display: 'flex', border: '1px solid var(--border)' }}>
                     {['expense', 'income', 'bill', 'investment'].map(t => (
                         <button
-                            key={t} type="button" onClick={() => setType(t)}
+                            key={t} type="button" onClick={() => {
+                                setType(t);
+                                hapticFeedback('light');
+                            }}
                             style={{
                                 flex: 1, padding: '12px 0', borderRadius: '14px', border: 'none',
                                 background: type === t ? '#FFFFFF' : 'transparent',
@@ -156,7 +161,10 @@ export default function AddTransactionView() {
                                 <span style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-secondary)' }}>Nova</span>
                             </button>
                             {availableCategories.map(cat => (
-                                <button key={cat.id} type="button" onClick={() => setSelectedCategoryId(cat.id)} style={{ minWidth: '72px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', background: 'transparent', border: 'none', cursor: 'pointer', opacity: selectedCategoryId === cat.id ? 1 : 0.4, transform: selectedCategoryId === cat.id ? 'scale(1.05)' : 'scale(1)', transition: '0.2s' }}>
+                                <button key={cat.id} type="button" onClick={() => {
+                                    setSelectedCategoryId(cat.id);
+                                    hapticFeedback('light');
+                                }} style={{ minWidth: '72px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', background: 'transparent', border: 'none', cursor: 'pointer', opacity: selectedCategoryId === cat.id ? 1 : 0.4, transform: selectedCategoryId === cat.id ? 'scale(1.05)' : 'scale(1)', transition: '0.2s' }}>
                                     <div style={{ width: '56px', height: '56px', borderRadius: '20px', background: selectedCategoryId === cat.id ? cat.color : 'var(--bg-secondary)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem', boxShadow: selectedCategoryId === cat.id ? `0 8px 20px ${cat.color}30` : 'none' }}>{cat.icon}</div>
                                     <span style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-secondary)' }}>{cat.name}</span>
                                 </button>
@@ -197,7 +205,10 @@ export default function AddTransactionView() {
                                 <span style={{ fontSize: '0.95rem', fontWeight: '700' }}>Dividir com Grupo</span>
                             </div>
                             <label className="switch">
-                                <input type="checkbox" checked={isGroupTransaction} onChange={e => setIsGroupTransaction(e.target.checked)} />
+                                <input type="checkbox" checked={isGroupTransaction} onChange={e => {
+                                    setIsGroupTransaction(e.target.checked);
+                                    hapticFeedback('light');
+                                }} />
                                 <span className="slider"></span>
                             </label>
                         </div>
@@ -208,7 +219,10 @@ export default function AddTransactionView() {
                                 <span style={{ fontSize: '0.95rem', fontWeight: '700' }}>Recorrência</span>
                             </div>
                             <label className="switch">
-                                <input type="checkbox" checked={isRecurring} onChange={e => setIsRecurring(e.target.checked)} />
+                                <input type="checkbox" checked={isRecurring} onChange={e => {
+                                    setIsRecurring(e.target.checked);
+                                    hapticFeedback('light');
+                                }} />
                                 <span className="slider"></span>
                             </label>
                         </div>
@@ -349,6 +363,7 @@ export default function AddTransactionView() {
                 <button
                     type="submit"
                     disabled={isSaving}
+                    onClick={() => hapticFeedback('medium')}
                     style={{
                         padding: '20px', borderRadius: '22px', background: getThemeColor(), color: '#fff', border: 'none', fontSize: '1.2rem', fontWeight: '900', cursor: 'pointer', boxShadow: `0 15px 35px ${getThemeColor()}40`, transition: '0.3s'
                     }}

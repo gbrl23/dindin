@@ -177,7 +177,7 @@ export default function AddTransactionView() {
                             <label style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '10px', display: 'block' }}>Quando?</label>
                             <div style={{ position: 'relative' }}>
                                 <Calendar size={20} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
-                                <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ width: '100%', padding: '16px 16px 16px 48px', borderRadius: '18px', background: 'var(--bg-secondary)', border: 'none', fontSize: '1rem', fontWeight: '600', outline: 'none' }} />
+                                <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ width: '100%', padding: '16px 16px 16px 48px', borderRadius: '18px', background: 'var(--bg-secondary)', border: 'none', fontSize: '1rem', fontWeight: '600', outline: 'none', boxSizing: 'border-box' }} />
                             </div>
                         </div>
 
@@ -198,166 +198,149 @@ export default function AddTransactionView() {
 
                 {/* Divisão de Grupo e Opções Avançadas */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px' }}>
-                        <div className="card" style={{ padding: '20px', borderRadius: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid var(--border)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <div style={{ padding: '10px', background: '#F2F2F7', borderRadius: '14px', color: 'var(--primary)' }}><Users size={20} /></div>
-                                <span style={{ fontSize: '0.95rem', fontWeight: '700' }}>Dividir com Grupo</span>
-                            </div>
-                            <label className="switch">
-                                <input type="checkbox" checked={isGroupTransaction} onChange={e => {
-                                    setIsGroupTransaction(e.target.checked);
-                                    hapticFeedback('light');
-                                }} />
-                                <span className="slider"></span>
-                            </label>
-                        </div>
-
-                        <div className="card" style={{ padding: '20px', borderRadius: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid var(--border)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <div style={{ padding: '10px', background: '#F2F2F7', borderRadius: '14px', color: 'var(--primary)' }}><Repeat size={20} /></div>
-                                <span style={{ fontSize: '0.95rem', fontWeight: '700' }}>Recorrência</span>
-                            </div>
-                            <label className="switch">
-                                <input type="checkbox" checked={isRecurring} onChange={e => {
-                                    setIsRecurring(e.target.checked);
-                                    hapticFeedback('light');
-                                }} />
-                                <span className="slider"></span>
-                            </label>
-                        </div>
-                    </div>
-
-                    {type === 'expense' && !isRecurring && (
-                        <div className="card" style={{ padding: '20px', borderRadius: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid var(--border)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <div style={{ padding: '10px', background: '#F2F2F7', borderRadius: '14px', color: 'var(--primary)' }}><Repeat size={20} /></div>
-                                <span style={{ fontSize: '0.95rem', fontWeight: '700' }}>Parcelar</span>
-                            </div>
-                            <input type="number" min="1" max="48" value={installments} onChange={e => setInstallments(parseInt(e.target.value))} style={{ width: '50px', border: 'none', background: 'var(--bg-secondary)', borderRadius: '10px', textAlign: 'center', fontWeight: '800', fontSize: '1rem', padding: '8px' }} />
-                        </div>
-                    )}
-
-                    {isGroupTransaction && (
-                        <div className="card" style={{ padding: '24px', borderRadius: '28px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                            <div>
-                                <label style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '10px', display: 'block' }}>Qual Grupo?</label>
-                                <select value={selectedGroupId} onChange={e => setSelectedGroupId(e.target.value)} style={{ width: '100%', padding: '14px', borderRadius: '14px', border: 'none', background: 'var(--bg-secondary)', fontWeight: '600', outline: 'none' }}>
-                                    <option value="">Sem grupo</option>
-                                    {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-                                </select>
-                            </div>
-
-                            {/* Seletor de Modo de Divisão */}
-                            <div>
-                                <label style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '10px', display: 'block' }}>Como dividir?</label>
-                                <div style={{ display: 'flex', gap: '8px', background: 'var(--bg-secondary)', padding: '4px', borderRadius: '14px' }}>
-                                    {[
-                                        { id: 'equal', label: 'Igual' },
-                                        { id: 'custom', label: 'Manual/Proporcional' }
-                                    ].map(mode => (
-                                        <button
-                                            key={mode.id} type="button" onClick={() => setSplitMode(mode.id)}
-                                            style={{
-                                                flex: 1, padding: '10px', borderRadius: '10px', border: 'none',
-                                                background: splitMode === mode.id ? '#FFF' : 'transparent',
-                                                color: splitMode === mode.id ? 'var(--primary)' : 'var(--text-secondary)',
-                                                fontWeight: '700', fontSize: '0.85rem', cursor: 'pointer',
-                                                boxShadow: splitMode === mode.id ? '0 2px 8px rgba(0,0,0,0.05)' : 'none'
-                                            }}
-                                        >
-                                            {mode.label}
-                                        </button>
-                                    ))}
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px', alignItems: 'start' }}>
+                        {/* Bloco Dividir Gasto */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <div className="card" style={{ padding: '20px', borderRadius: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid var(--border)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <div style={{ padding: '10px', background: '#F2F2F7', borderRadius: '14px', color: 'var(--primary)' }}><Users size={20} /></div>
+                                    <span style={{ fontSize: '0.95rem', fontWeight: '700' }}>Dividir Gasto</span>
                                 </div>
+                                <label className="switch">
+                                    <input type="checkbox" checked={isGroupTransaction} onChange={e => {
+                                        setIsGroupTransaction(e.target.checked);
+                                        hapticFeedback('light');
+                                    }} />
+                                    <span className="slider"></span>
+                                </label>
                             </div>
 
-                            {/* Busca/Adição de Perfil Externo */}
-                            <div>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                                    <label style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-secondary)' }}>Participantes</label>
-                                    <div style={{ display: 'flex', gap: '12px' }}>
-                                        <button type="button" onClick={() => setSelectedProfiles(prev => prev.map(p => ({ ...p, isSelected: true })))} style={{ background: 'transparent', border: 'none', color: 'var(--primary)', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer' }}>Marcar todos</button>
-                                        <button type="button" onClick={() => setSelectedProfiles(prev => prev.map(p => ({ ...p, isSelected: false })))} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer' }}>Nenhum</button>
+                            {isGroupTransaction && (
+                                <div className="card animate-fade-in" style={{ padding: '24px', borderRadius: '28px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                    <div>
+                                        <label style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '10px', display: 'block' }}>Qual Grupo?</label>
+                                        <select value={selectedGroupId} onChange={e => setSelectedGroupId(e.target.value)} style={{ width: '100%', padding: '14px', borderRadius: '14px', border: 'none', background: 'var(--bg-secondary)', fontWeight: '600', outline: 'none' }}>
+                                            <option value="">Sem grupo</option>
+                                            {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '10px', display: 'block' }}>Como dividir?</label>
+                                        <div style={{ display: 'flex', gap: '8px', background: 'var(--bg-secondary)', padding: '4px', borderRadius: '14px' }}>
+                                            {[
+                                                { id: 'equal', label: 'Igual' },
+                                                { id: 'custom', label: 'Manual' }
+                                            ].map(mode => (
+                                                <button
+                                                    key={mode.id} type="button" onClick={() => setSplitMode(mode.id)}
+                                                    style={{
+                                                        flex: 1, padding: '10px', borderRadius: '10px', border: 'none',
+                                                        background: splitMode === mode.id ? '#FFF' : 'transparent',
+                                                        color: splitMode === mode.id ? 'var(--primary)' : 'var(--text-secondary)',
+                                                        fontWeight: '700', fontSize: '0.85rem', cursor: 'pointer',
+                                                        boxShadow: splitMode === mode.id ? '0 2px 8px rgba(0,0,0,0.05)' : 'none'
+                                                    }}
+                                                >
+                                                    {mode.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                                            <label style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-secondary)' }}>Participantes</label>
+                                            <button type="button" onClick={() => setSelectedProfiles(prev => prev.map(p => ({ ...p, isSelected: !prev.every(x => x.isSelected) })))} style={{ background: 'transparent', border: 'none', color: 'var(--primary)', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer' }}>
+                                                {selectedProfiles.every(x => x.isSelected) ? 'Desmarcar todos' : 'Marcar todos'}
+                                            </button>
+                                        </div>
+
+                                        <div style={{ position: 'relative', marginBottom: '16px' }}>
+                                            <Search size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
+                                            <input
+                                                placeholder="Adicionar externa (ex: Amigo)..."
+                                                value={participantSearch}
+                                                onChange={e => setParticipantSearch(e.target.value)}
+                                                onKeyDown={async (e) => {
+                                                    if (e.key === 'Enter' && participantSearch.trim()) {
+                                                        e.preventDefault();
+                                                        try {
+                                                            const newProfile = await addProfile(participantSearch.trim());
+                                                            if (newProfile) {
+                                                                setSelectedProfiles(prev => [...prev.map(p => ({ ...p, isSelected: p.isSelected })), { ...newProfile, isSelected: true, isOwner: false }]);
+                                                                setParticipantSearch('');
+                                                            }
+                                                        } catch (err) { alert('Erro ao criar perfil'); }
+                                                    }
+                                                }}
+                                                style={{ width: '100%', padding: '12px 12px 12px 42px', borderRadius: '12px', background: 'var(--bg-secondary)', border: '1px solid var(--border-light)', fontSize: '0.9rem', outline: 'none' }}
+                                            />
+                                        </div>
+
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                            {selectedProfiles.map(profile => (
+                                                <div key={profile.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px', borderRadius: '14px', background: profile.isSelected ? 'var(--bg-secondary)' : 'transparent', border: `1px solid ${profile.isSelected ? 'var(--border-light)' : 'transparent'}`, opacity: profile.isSelected ? 1 : 0.6, cursor: 'pointer' }} onClick={() => {
+                                                    setSelectedProfiles(prev => prev.map(p => p.id === profile.id ? { ...p, isSelected: !p.isSelected } : p));
+                                                }}>
+                                                    <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: profile.isOwner ? 'var(--primary)' : '#E0E0E0', color: profile.isOwner ? '#FFF' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '0.85rem' }}>
+                                                        {profile.name?.substring(0, 1).toUpperCase()}
+                                                    </div>
+                                                    <div style={{ flex: 1 }}>
+                                                        <div style={{ fontSize: '0.9rem', fontWeight: '600' }}>{profile.name} {profile.isOwner && '(Você)'}</div>
+                                                    </div>
+                                                    {splitMode === 'custom' && profile.isSelected && (
+                                                        <div onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#FFF', padding: '4px 8px', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
+                                                            <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-secondary)' }}>R$</span>
+                                                            <input
+                                                                value={customShares[profile.id] || ''}
+                                                                onChange={e => {
+                                                                    const val = e.target.value.replace(/[^\d,]/g, '');
+                                                                    setCustomShares(prev => ({ ...prev, [profile.id]: val }));
+                                                                }}
+                                                                placeholder="0,00"
+                                                                style={{ width: '60px', border: 'none', outline: 'none', fontSize: '0.9rem', fontWeight: '700', textAlign: 'right' }}
+                                                            />
+                                                        </div>
+                                                    )}
+                                                    <div style={{ width: '24px', height: '24px', borderRadius: '8px', border: `2px solid ${profile.isSelected ? 'var(--primary)' : 'var(--border)'}`, background: profile.isSelected ? 'var(--primary)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                        {profile.isSelected && <Check size={14} color="#FFF" />}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
-                                <div style={{ position: 'relative', marginBottom: '16px' }}>
-                                    <Search size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
-                                    <input
-                                        placeholder="Adicionar externa (ex: Amigo)..."
-                                        value={participantSearch}
-                                        onChange={e => setParticipantSearch(e.target.value)}
-                                        onKeyDown={async (e) => {
-                                            if (e.key === 'Enter' && participantSearch.trim()) {
-                                                e.preventDefault();
-                                                try {
-                                                    const newProfile = await addProfile(participantSearch.trim());
-                                                    if (newProfile) {
-                                                        setSelectedProfiles(prev => [...prev.map(p => ({ ...p, isSelected: true })), { ...newProfile, isSelected: true, isOwner: false }]);
-                                                        setParticipantSearch('');
-                                                    }
-                                                } catch (err) { alert('Erro ao criar perfil'); }
-                                            }
-                                        }}
-                                        style={{ width: '100%', padding: '12px 12px 12px 42px', borderRadius: '12px', background: 'var(--bg-secondary)', border: '1px solid var(--border-light)', fontSize: '0.9rem', outline: 'none' }}
-                                    />
-                                    {participantSearch && (
-                                        <button
-                                            type="button"
-                                            onClick={async () => {
-                                                try {
-                                                    const newProfile = await addProfile(participantSearch.trim());
-                                                    if (newProfile) {
-                                                        setSelectedProfiles(prev => [...prev.map(p => ({ ...p, isSelected: p.isSelected })), { ...newProfile, isSelected: true, isOwner: false }]);
-                                                        setParticipantSearch('');
-                                                    }
-                                                } catch (err) { alert('Erro ao criar perfil'); }
-                                            }}
-                                            style={{ position: 'absolute', right: '4px', top: '4px', bottom: '4px', background: 'var(--primary)', color: '#FFF', border: 'none', borderRadius: '8px', padding: '0 12px', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer' }}
-                                        >
-                                            Criar
-                                        </button>
-                                    )}
-                                </div>
-
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                    {selectedProfiles.length === 0 && (
-                                        <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-tertiary)', fontSize: '0.9rem' }}>Nenhum participante encontrado</div>
-                                    )}
-                                    {selectedProfiles.map(profile => (
-                                        <div key={profile.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px', borderRadius: '14px', background: profile.isSelected ? 'var(--bg-secondary)' : 'transparent', border: `1px solid ${profile.isSelected ? 'var(--border-light)' : 'transparent'}`, opacity: profile.isSelected ? 1 : 0.6, cursor: 'pointer' }} onClick={() => {
-                                            setSelectedProfiles(prev => prev.map(p => p.id === profile.id ? { ...p, isSelected: !p.isSelected } : p));
-                                        }}>
-                                            <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: profile.isOwner ? 'var(--primary)' : '#E0E0E0', color: profile.isOwner ? '#FFF' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '0.85rem' }}>
-                                                {profile.name?.substring(0, 1).toUpperCase()}
-                                            </div>
-                                            <div style={{ flex: 1 }}>
-                                                <div style={{ fontSize: '0.9rem', fontWeight: '600' }}>{profile.name} {profile.isOwner && '(Você)'}</div>
-                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>{profile.user_id ? 'Perfil' : 'Convidado'}</div>
-                                            </div>
-                                            {splitMode === 'custom' && profile.isSelected && (
-                                                <div onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#FFF', padding: '4px 8px', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
-                                                    <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-secondary)' }}>R$</span>
-                                                    <input
-                                                        value={customShares[profile.id] || ''}
-                                                        onChange={e => {
-                                                            const val = e.target.value.replace(/[^\d,]/g, '');
-                                                            setCustomShares(prev => ({ ...prev, [profile.id]: val }));
-                                                        }}
-                                                        placeholder="0,00"
-                                                        style={{ width: '60px', border: 'none', outline: 'none', fontSize: '0.9rem', fontWeight: '700', textAlign: 'right' }}
-                                                    />
-                                                </div>
-                                            )}
-                                            <div style={{ width: '24px', height: '24px', borderRadius: '8px', border: `2px solid ${profile.isSelected ? 'var(--primary)' : 'var(--border)'}`, background: profile.isSelected ? 'var(--primary)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                {profile.isSelected && <Check size={14} color="#FFF" />}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
+                            )}
                         </div>
-                    )}
+
+                        {/* Bloco Recorrência / Parcelar */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <div className="card" style={{ padding: '20px', borderRadius: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid var(--border)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <div style={{ padding: '10px', background: '#F2F2F7', borderRadius: '14px', color: 'var(--primary)' }}><Repeat size={20} /></div>
+                                    <span style={{ fontSize: '0.95rem', fontWeight: '700' }}>Recorrência</span>
+                                </div>
+                                <label className="switch">
+                                    <input type="checkbox" checked={isRecurring} onChange={e => {
+                                        setIsRecurring(e.target.checked);
+                                        hapticFeedback('light');
+                                    }} />
+                                    <span className="slider"></span>
+                                </label>
+                            </div>
+
+                            {type === 'expense' && !isRecurring && (
+                                <div className="card animate-fade-in" style={{ padding: '20px', borderRadius: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid var(--border)' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <div style={{ padding: '10px', background: '#F2F2F7', borderRadius: '14px', color: 'var(--primary)' }}><Repeat size={20} /></div>
+                                        <span style={{ fontSize: '0.95rem', fontWeight: '700' }}>Parcelar</span>
+                                    </div>
+                                    <input type="number" min="1" max="48" value={installments} onChange={e => setInstallments(parseInt(e.target.value))} style={{ width: '60px', border: 'none', background: 'var(--bg-secondary)', borderRadius: '12px', textAlign: 'center', fontWeight: '800', fontSize: '1rem', padding: '10px' }} />
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
 
                 <button

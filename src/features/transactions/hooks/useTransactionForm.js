@@ -188,7 +188,17 @@ export function useTransactionForm({ onSaveSuccess, initialData = null, initialT
                 ? (numericAmount / numInstallments)
                 : numericAmount;
 
-            const seriesId = (numInstallments > 1 || isRecurring) ? (initialData?.series_id || crypto.randomUUID()) : null;
+            const generateUUID = () => {
+                if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+                    return crypto.randomUUID();
+                }
+                return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+                    const r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                    return v.toString(16);
+                });
+            };
+
+            const seriesId = (numInstallments > 1 || isRecurring) ? (initialData?.series_id || generateUUID()) : null;
             const batch = [];
 
             for (let i = 0; i < numInstallments; i++) {

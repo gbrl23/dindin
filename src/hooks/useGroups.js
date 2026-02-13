@@ -210,40 +210,18 @@ export function useGroups() {
     const getGroupMembers = useCallback(async (groupId) => {
         if (!groupId) return [];
         try {
-            // 1. Get Member IDs
-            const { data: members, error: membersError } = await supabase
-                .from('group_members')
-                .select('user_id, role')
-                .eq('group_id', groupId);
+            const { data, error } = await supabase.rpc('get_group_members_detailed', {
+                p_group_id: groupId
+            });
 
-            if (membersError) throw membersError;
-            if (!members || members.length === 0) return [];
-
-            const userIds = members.map(m => m.user_id).filter(Boolean);
-
-            // 2. Get Profiles for these IDs
-            const { data: profileList, error: profilesError } = await supabase
-                .from('profiles')
-                .select('id, user_id, full_name, email, avatar_url')
-                .in('user_id', userIds);
-
-            if (profilesError) throw profilesError;
-
-            // 3. Merge Data
-            const merged = members.map(m => {
-                const profile = profileList.find(p => p.user_id === m.user_id);
-                if (!profile) return null;
-                return {
-                    ...profile,
-                    name: profile.full_name || profile.email || 'Usuário',
-                    role: m.role
-                };
-            }).filter(p => !!p);
-
-            return merged;
+            if (error) throw error;
+            return (data || []).map(m => ({
+                ...m,
+                name: m.full_name || m.email || 'Usuário'
+            }));
 
         } catch (err) {
-            console.error("Error getting group members", err);
+            console.error("Error getting group members detailed", err);
             return [];
         }
     }, []);

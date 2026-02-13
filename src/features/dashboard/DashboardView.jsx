@@ -124,9 +124,9 @@ export default function DashboardView() {
         };
     }, [transactions, selectedDate, monthlyIncome, myProfile, user?.id]);
 
-    // Keep the hook for the complex arithmetic of shares until we refactor it fully into useMemo
+    // Optimized: Pass pre-filtered monthlyTransactions instead of the entire transaction history
     const balanceDetails = useBalanceCalculator(
-        transactions,
+        monthlyTransactions,
         myProfile?.id,
         selectedDate
     );

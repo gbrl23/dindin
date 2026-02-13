@@ -548,8 +548,8 @@ export default function GroupDetailsView() {
                                 }}>
                                     <Receipt size={20} />
                                 </div>
-                                <div>
-                                    <div style={{ fontWeight: '600', fontSize: '0.95rem', marginBottom: '2px' }}>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontWeight: '600', fontSize: '0.95rem', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                         {t.description}
                                     </div>
                                     <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>

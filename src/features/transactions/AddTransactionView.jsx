@@ -175,9 +175,24 @@ export default function AddTransactionView() {
                     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '20px' }}>
                         <div style={{ minWidth: 0 }}>
                             <label style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '10px', display: 'block' }}>Quando?</label>
-                            <div style={{ position: 'relative' }}>
-                                <Calendar size={20} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
-                                <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ width: '100%', padding: '16px 16px 16px 48px', borderRadius: '18px', background: 'var(--bg-secondary)', border: 'none', fontSize: '1rem', fontWeight: '600', outline: 'none', boxSizing: 'border-box', minWidth: 0 }} />
+                            <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-secondary)', borderRadius: '18px', padding: '0 16px', border: '1px solid transparent', transition: '0.2s' }}>
+                                <Calendar size={20} color="var(--text-tertiary)" style={{ marginRight: '12px', flexShrink: 0 }} />
+                                <input
+                                    type="date"
+                                    value={date}
+                                    onChange={e => setDate(e.target.value)}
+                                    style={{
+                                        flex: 1,
+                                        background: 'transparent',
+                                        border: 'none',
+                                        fontSize: '1rem',
+                                        fontWeight: '600',
+                                        outline: 'none',
+                                        padding: '16px 0',
+                                        minWidth: 0, // Critical for flex item shrinking
+                                        width: '100%' // Ensure it fills available flex space
+                                    }}
+                                />
                             </div>
                         </div>
 

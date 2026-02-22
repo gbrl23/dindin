@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Search, Plus, Filter, ChevronLeft, ChevronRight, Calendar, Bell, MoreVertical, LogOut, Settings, User } from 'lucide-react';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useProfiles } from '../../hooks/useProfiles';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '../../hooks/useNotifications';
 import NotificationsDropdown from './NotificationsDropdown';
@@ -9,8 +10,11 @@ import NotificationsDropdown from './NotificationsDropdown';
 export default function TopHeader({ onOpenNewTransaction }) {
     const { selectedDate, handlePrevMonth, handleNextMonth, handleSetToday } = useDashboard();
     const { user, signOut } = useAuth();
+    const { myProfile } = useProfiles();
     const { notifications, unreadCount, acceptGroupInvite } = useNotifications();
     const navigate = useNavigate();
+
+    const displayAvatarUrl = myProfile?.avatar_url || user?.user_metadata?.avatar_url;
 
     const _monthName = selectedDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
     const monthLabel = _monthName.charAt(0).toUpperCase() + _monthName.slice(1);
@@ -208,9 +212,9 @@ export default function TopHeader({ onOpenNewTransaction }) {
                         onClick={() => setShowUserMenu(!showUserMenu)}
                         style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
                     >
-                        {user?.user_metadata?.avatar_url ? (
+                        {displayAvatarUrl ? (
                             <img
-                                src={user.user_metadata.avatar_url}
+                                src={displayAvatarUrl}
                                 alt="Profile"
                                 style={{
                                     width: '40px',

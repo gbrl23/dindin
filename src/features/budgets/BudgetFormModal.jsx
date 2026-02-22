@@ -6,6 +6,7 @@ export default function BudgetFormModal({ isOpen, onClose, onSave, categories, e
     const [amount, setAmount] = useState('');
 
     const isEditing = !!editingBudget;
+    const isMobileModal = typeof window !== 'undefined' && window.innerWidth <= 480;
 
     useEffect(() => {
         if (editingBudget) {
@@ -35,119 +36,136 @@ export default function BudgetFormModal({ isOpen, onClose, onSave, categories, e
         onSave({ categoryId, amount: Number(amount), isEditing, budgetId: editingBudget?.id });
         onClose();
     };
-
     return (
-        <div style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 1000,
-            display: 'flex',
-            alignItems: 'flex-end',
-            justifyContent: 'center',
-        }}>
-            {/* Backdrop */}
+        <div
+            onClick={(e) => { e.stopPropagation(); onClose(); }}
+            style={{
+                position: 'fixed', inset: 0, zIndex: 3000,
+                background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(12px)',
+                display: 'flex', alignItems: isMobileModal ? 'flex-end' : 'center', justifyContent: 'center',
+                cursor: 'pointer'
+            }}
+        >
+            {/* Safety Margin Wrapper */}
             <div
-                onClick={onClose}
-                style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)' }}
-            />
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                    padding: isMobileModal ? '0' : '40px',
+                    display: 'flex',
+                    alignItems: isMobileModal ? 'flex-end' : 'center',
+                    justifyContent: 'center',
+                    width: '100%',
+                    maxWidth: isMobileModal ? '100%' : '560px',
+                    cursor: 'default'
+                }}
+            >
+                <div style={{ position: 'relative', width: '100%', maxWidth: isMobileModal ? '100%' : '480px' }}>
+                    <div className="card animate-fade-in custom-scroll" style={{
+                        width: '100%',
+                        background: 'var(--bg-card)',
+                        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+                        borderRadius: isMobileModal ? '28px 28px 0 0' : '28px',
+                        padding: isMobileModal ? '24px 20px 40px' : '32px',
+                        position: 'relative',
+                        maxHeight: isMobileModal ? '92vh' : '85vh',
+                        overflowY: 'auto',
+                        scrollbarGutter: 'stable',
+                        border: '1px solid rgba(255,255,255,0.1)'
+                    }}>
+                        {/* Header */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800', textAlign: 'center', letterSpacing: '-0.5px', color: 'var(--text-primary)', flex: 1 }}>
+                                {isEditing ? 'Editar Orçamento' : 'Novo Orçamento'}
+                            </h3>
+                            <button
+                                onClick={onClose}
+                                style={{
+                                    position: 'absolute', right: '16px', top: '16px', background: 'var(--bg-secondary)', border: 'none',
+                                    cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center',
+                                    justifyContent: 'center', width: '36px', height: '36px', borderRadius: '50%', zIndex: 20
+                                }}
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
 
-            {/* Modal */}
-            <div style={{
-                position: 'relative',
-                background: '#fff',
-                borderRadius: '20px 20px 0 0',
-                padding: '24px 20px',
-                width: '100%',
-                maxWidth: 480,
-                maxHeight: '80vh',
-                overflow: 'auto',
-            }}>
-                {/* Header */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                    <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>
-                        {isEditing ? 'Editar Orçamento' : 'Novo Orçamento'}
-                    </h3>
-                    <button
-                        onClick={onClose}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
-                    >
-                        <X size={20} />
-                    </button>
+                        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                            {/* Category Select */}
+                            <div>
+                                <label style={{ fontSize: 13, fontWeight: 500, color: '#666', marginBottom: 6, display: 'block' }}>
+                                    Categoria
+                                </label>
+                                <select
+                                    value={categoryId}
+                                    onChange={(e) => setCategoryId(e.target.value)}
+                                    disabled={isEditing}
+                                    required
+                                    style={{
+                                        width: '100%',
+                                        padding: '12px 14px',
+                                        borderRadius: 12,
+                                        border: '1px solid #e0e0e0',
+                                        fontSize: 15,
+                                        backgroundColor: isEditing ? '#f5f5f5' : '#fff',
+                                        appearance: 'auto',
+                                    }}
+                                >
+                                    <option value="">Selecione...</option>
+                                    {availableCategories.map(cat => (
+                                        <option key={cat.id} value={cat.id}>
+                                            {cat.icon} {cat.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Amount */}
+                            <div>
+                                <label style={{ fontSize: 13, fontWeight: 500, color: '#666', marginBottom: 6, display: 'block' }}>
+                                    Limite mensal (R$)
+                                </label>
+                                <input
+                                    type="number"
+                                    value={amount}
+                                    onChange={(e) => setAmount(e.target.value)}
+                                    placeholder="0,00"
+                                    min="0.01"
+                                    step="0.01"
+                                    required
+                                    style={{
+                                        width: '100%',
+                                        padding: '12px 14px',
+                                        borderRadius: 12,
+                                        border: '1px solid #e0e0e0',
+                                        fontSize: 15,
+                                        boxSizing: 'border-box',
+                                    }}
+                                />
+                            </div>
+
+                            {/* Submit */}
+                            <button
+                                type="submit"
+                                style={{
+                                    width: '100%',
+                                    padding: '16px',
+                                    borderRadius: '16px',
+                                    border: 'none',
+                                    background: 'var(--primary)',
+                                    color: '#fff',
+                                    fontSize: '1rem',
+                                    fontWeight: '700',
+                                    cursor: 'pointer',
+                                    marginTop: '16px',
+                                    transition: 'all 0.2s',
+                                    boxShadow: '0 4px 12px rgba(81,0,255,0.2)'
+                                }}
+                            >
+                                {isEditing ? 'Salvar' : 'Criar Orçamento'}
+                            </button>
+                        </form>
+                    </div>
                 </div>
-
-                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                    {/* Category Select */}
-                    <div>
-                        <label style={{ fontSize: 13, fontWeight: 500, color: '#666', marginBottom: 6, display: 'block' }}>
-                            Categoria
-                        </label>
-                        <select
-                            value={categoryId}
-                            onChange={(e) => setCategoryId(e.target.value)}
-                            disabled={isEditing}
-                            required
-                            style={{
-                                width: '100%',
-                                padding: '12px 14px',
-                                borderRadius: 12,
-                                border: '1px solid #e0e0e0',
-                                fontSize: 15,
-                                backgroundColor: isEditing ? '#f5f5f5' : '#fff',
-                                appearance: 'auto',
-                            }}
-                        >
-                            <option value="">Selecione...</option>
-                            {availableCategories.map(cat => (
-                                <option key={cat.id} value={cat.id}>
-                                    {cat.icon} {cat.name}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* Amount */}
-                    <div>
-                        <label style={{ fontSize: 13, fontWeight: 500, color: '#666', marginBottom: 6, display: 'block' }}>
-                            Limite mensal (R$)
-                        </label>
-                        <input
-                            type="number"
-                            value={amount}
-                            onChange={(e) => setAmount(e.target.value)}
-                            placeholder="0,00"
-                            min="0.01"
-                            step="0.01"
-                            required
-                            style={{
-                                width: '100%',
-                                padding: '12px 14px',
-                                borderRadius: 12,
-                                border: '1px solid #e0e0e0',
-                                fontSize: 15,
-                                boxSizing: 'border-box',
-                            }}
-                        />
-                    </div>
-
-                    {/* Submit */}
-                    <button
-                        type="submit"
-                        style={{
-                            width: '100%',
-                            padding: '14px',
-                            borderRadius: 12,
-                            border: 'none',
-                            background: '#5100FF',
-                            color: '#fff',
-                            fontSize: 16,
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            marginTop: 8,
-                        }}
-                    >
-                        {isEditing ? 'Salvar' : 'Criar Orçamento'}
-                    </button>
-                </form>
             </div>
         </div>
     );

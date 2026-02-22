@@ -6,6 +6,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import { CardsProvider } from './contexts/CardsContext'
 import { TransactionsProvider } from './contexts/TransactionsContext'
 import { GoalsProvider } from './contexts/GoalsContext'
+import './styles/tailwind.css'
 import './styles/index.css'
 
 console.log('App mounting...');

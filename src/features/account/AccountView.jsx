@@ -1059,7 +1059,7 @@ export default function AccountView() {
                 color: 'var(--text-secondary)',
                 fontSize: '0.85rem'
             }}>
-                <p style={{ marginBottom: '4px' }}>Dindin v1.0.0</p>
+                <p style={{ marginBottom: '4px' }}>Dindin v{__APP_VERSION__}</p>
                 <p style={{ opacity: 0.7 }}>Feito com 💜 para organizar suas finanças</p>
             </div>
 

@@ -69,7 +69,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     const signOut = () => {
-        return supabase.auth.signOut();
+        return supabase.auth.signOut({ scope: 'local' });
     };
 
     return (

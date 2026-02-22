@@ -11,12 +11,16 @@ export default function LoginView() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [rememberMe, setRememberMe] = useState(() => {
+        return localStorage.getItem('dindin_remember_me') !== 'false';
+    });
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
             setError('');
             setLoading(true);
+            localStorage.setItem('dindin_remember_me', rememberMe ? 'true' : 'false');
             const { error } = await signIn(email, password);
             if (error) throw error;
             navigate('/dashboard');
@@ -105,12 +109,30 @@ export default function LoginView() {
                         />
                     </div>
 
+                    <label style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        cursor: 'pointer',
+                        fontSize: '0.9rem',
+                        color: 'var(--text-secondary)',
+                        userSelect: 'none',
+                    }}>
+                        <input
+                            type="checkbox"
+                            checked={rememberMe}
+                            onChange={(e) => setRememberMe(e.target.checked)}
+                            style={{ width: '18px', height: '18px', accentColor: 'var(--primary)', cursor: 'pointer' }}
+                        />
+                        Permanecer conectado
+                    </label>
+
                     <button
                         type="submit"
                         disabled={loading}
                         className="btn btn-primary"
                         style={{
-                            marginTop: '16px',
+                            marginTop: '4px',
                             padding: '16px',
                             display: 'flex',
                             alignItems: 'center',

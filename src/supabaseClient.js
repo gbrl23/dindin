@@ -44,12 +44,26 @@ if (!isConfigValid && import.meta.env.PROD) {
     console.error('❌ Configuração Supabase inválida em produção!');
 }
 
+// Use sessionStorage when user chose not to stay logged in
+const rememberMe = typeof window !== 'undefined'
+    ? localStorage.getItem('dindin_remember_me') !== 'false'
+    : true;
+
+const customStorage = !rememberMe && typeof window !== 'undefined'
+    ? {
+        getItem: (key) => sessionStorage.getItem(key),
+        setItem: (key, value) => sessionStorage.setItem(key, value),
+        removeItem: (key) => sessionStorage.removeItem(key),
+    }
+    : undefined;
+
 export const supabase = isConfigValid
     ? createClient(supabaseUrl, supabaseAnonKey, {
         auth: {
             autoRefreshToken: true,
             persistSession: true,
-            detectSessionInUrl: true
+            detectSessionInUrl: true,
+            ...(customStorage && { storage: customStorage }),
         }
     })
     : null;

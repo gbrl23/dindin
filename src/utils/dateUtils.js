@@ -54,3 +54,32 @@ export const displayDateShort = (dateStr) => {
     const [, month, day] = dateStr.split('-');
     return `${day}/${month}`;
 };
+
+/**
+ * Calculate the invoice month for a card transaction based on closing day.
+ * If the purchase day >= closing_day, the transaction falls into the NEXT month's invoice.
+ *
+ * @param {string} transactionDate - Transaction date in YYYY-MM-DD format
+ * @param {number} closingDay - Card closing day (1-31)
+ * @returns {string|null} Invoice date as YYYY-MM-01 or null if inputs are invalid
+ */
+export const getInvoiceMonth = (transactionDate, closingDay) => {
+    if (!transactionDate || !closingDay) return null;
+
+    const [txYear, txMonth, txDay] = transactionDate.split('-').map(Number);
+    if (!txYear || !txMonth || !txDay) return null;
+
+    let invMonth = txMonth;
+    let invYear = txYear;
+
+    if (txDay >= closingDay) {
+        invMonth++;
+        if (invMonth > 12) {
+            invMonth = 1;
+            invYear++;
+        }
+    }
+
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${invYear}-${pad(invMonth)}-01`;
+};

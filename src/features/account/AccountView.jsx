@@ -4,14 +4,18 @@ import { useProfiles } from '../../hooks/useProfiles';
 import { supabase } from '../../supabaseClient';
 import {
     User, Lock, Shield, Save, LogOut, ArrowLeft,
-    ChevronRight, Trash2, Camera, Calendar, DollarSign, AlertTriangle
+    ChevronRight, Trash2, Camera, Calendar, DollarSign, AlertTriangle, Bell
 } from 'lucide-react';
+import { useNotificationPreferences } from '../../hooks/useNotificationPreferences';
+import { usePushNotifications } from '../../hooks/usePushNotifications';
 import { useNavigate } from 'react-router-dom';
 
 export default function AccountView() {
     const { user, signOut } = useAuth();
     const { myProfile } = useProfiles();
     const navigate = useNavigate();
+    const { preferences: notifPrefs, fetchPreferences, updatePreference } = useNotificationPreferences();
+    const { permissionStatus, requestPermission, subscribe, unsubscribe } = usePushNotifications();
 
     // State
     const [isLoading, setIsLoading] = useState(false);
@@ -48,7 +52,10 @@ export default function AccountView() {
                 if (data.bio) setProfileBio(data.bio);
             }
         };
-        if (user?.id) fetchProfile();
+        if (user?.id) {
+            fetchProfile();
+            fetchPreferences();
+        }
     }, [user?.id]);
 
     // Get member since date
@@ -138,6 +145,25 @@ export default function AccountView() {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    // Notification toggle handler
+    const handleNotifToggle = async (key, value) => {
+        if (key === 'enabled' && value) {
+            // Ask for push permission when enabling
+            const perm = await requestPermission();
+            if (perm === 'denied') {
+                alert('Permissão de notificação negada. Habilite nas configurações do navegador.');
+                return;
+            }
+            if (perm === 'granted') {
+                await subscribe();
+            }
+        }
+        if (key === 'enabled' && !value) {
+            await unsubscribe();
+        }
+        await updatePreference(key, value);
     };
 
     // Avatar Upload Handler
@@ -758,6 +784,124 @@ export default function AccountView() {
                 </div>
             </section>
 
+            {/* Notifications Section */}
+            <section style={{ marginBottom: '24px' }}>
+                <h3 style={{
+                    fontSize: '0.85rem',
+                    fontWeight: '600',
+                    color: 'var(--text-secondary)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    marginBottom: '12px',
+                    paddingLeft: '4px'
+                }}>
+                    Notificações
+                </h3>
+
+                <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                    {/* Notifications accordion header */}
+                    <div
+                        onClick={() => setActiveSection(activeSection === 'notifications' ? null : 'notifications')}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '16px 20px',
+                            cursor: 'pointer',
+                            transition: 'background 0.2s'
+                        }}
+                        className="hover-bg"
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                            <div style={{
+                                width: '40px',
+                                height: '40px',
+                                borderRadius: '12px',
+                                background: 'rgba(245, 158, 11, 0.1)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}>
+                                <Bell size={20} color="#F59E0B" />
+                            </div>
+                            <div>
+                                <span style={{ fontWeight: '600' }}>Preferências de notificação</span>
+                                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
+                                    {notifPrefs?.enabled ? 'Ativadas' : 'Desativadas'}
+                                    {permissionStatus === 'denied' && ' (bloqueadas no navegador)'}
+                                </p>
+                            </div>
+                        </div>
+                        <ChevronRight
+                            size={20}
+                            color="var(--text-secondary)"
+                            style={{
+                                transform: activeSection === 'notifications' ? 'rotate(90deg)' : 'rotate(0deg)',
+                                transition: 'transform 0.2s'
+                            }}
+                        />
+                    </div>
+
+                    {/* Expand: Notification Toggles */}
+                    {activeSection === 'notifications' && (
+                        <div style={{
+                            padding: '20px',
+                            background: 'var(--bg-secondary)',
+                            borderTop: '1px solid var(--border)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '16px'
+                        }}>
+                            {permissionStatus === 'denied' && (
+                                <div style={{
+                                    padding: '12px 16px',
+                                    background: 'rgba(239, 68, 68, 0.1)',
+                                    borderRadius: '12px',
+                                    fontSize: '0.85rem',
+                                    color: 'var(--danger)'
+                                }}>
+                                    Notificações bloqueadas no navegador. Acesse as configurações do navegador para habilitar.
+                                </div>
+                            )}
+
+                            {/* Master Toggle */}
+                            <ToggleRow
+                                label="Ativar notificações"
+                                description="Receber alertas push neste dispositivo"
+                                checked={notifPrefs?.enabled || false}
+                                onChange={(val) => handleNotifToggle('enabled', val)}
+                                disabled={permissionStatus === 'denied'}
+                            />
+
+                            {/* Sub-toggles */}
+                            <ToggleRow
+                                label="Contas a vencer"
+                                description="Lembrete 3 dias antes do vencimento"
+                                checked={notifPrefs?.bills_due || false}
+                                onChange={(val) => handleNotifToggle('bills_due', val)}
+                                disabled={!notifPrefs?.enabled}
+                            />
+
+                            <ToggleRow
+                                label="Orçamento excedido"
+                                description="Alerta ao atingir 80% e 100% do limite"
+                                checked={notifPrefs?.budget_exceeded || false}
+                                onChange={(val) => handleNotifToggle('budget_exceeded', val)}
+                                disabled={!notifPrefs?.enabled}
+                            />
+
+                            <ToggleRow
+                                label="Atividade do grupo"
+                                description="Novos gastos adicionados por membros"
+                                checked={notifPrefs?.group_activity || false}
+                                onChange={(val) => handleNotifToggle('group_activity', val)}
+                                disabled={!notifPrefs?.enabled}
+                            />
+                        </div>
+                    )}
+                </div>
+            </section>
+
             {/* Danger Zone */}
             <section>
                 <h3 style={{
@@ -926,6 +1070,52 @@ export default function AccountView() {
                     to { transform: rotate(360deg); }
                 }
             `}</style>
+        </div>
+    );
+}
+
+function ToggleRow({ label, description, checked, onChange, disabled }) {
+    return (
+        <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            opacity: disabled ? 0.5 : 1,
+        }}>
+            <div>
+                <span style={{ fontWeight: '600', fontSize: '0.95rem' }}>{label}</span>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>{description}</p>
+            </div>
+            <button
+                type="button"
+                role="switch"
+                aria-checked={checked}
+                disabled={disabled}
+                onClick={() => onChange(!checked)}
+                style={{
+                    width: '48px',
+                    height: '28px',
+                    borderRadius: '14px',
+                    background: checked ? 'var(--primary)' : 'var(--border)',
+                    border: 'none',
+                    cursor: disabled ? 'not-allowed' : 'pointer',
+                    position: 'relative',
+                    transition: 'background 0.2s',
+                    flexShrink: 0,
+                }}
+            >
+                <span style={{
+                    position: 'absolute',
+                    top: '3px',
+                    left: checked ? '23px' : '3px',
+                    width: '22px',
+                    height: '22px',
+                    borderRadius: '50%',
+                    background: 'white',
+                    transition: 'left 0.2s',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                }} />
+            </button>
         </div>
     );
 }

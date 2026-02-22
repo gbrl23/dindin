@@ -5,7 +5,7 @@ import { useCategories } from '../../hooks/useCategories';
 import { useAuth } from '../../contexts/AuthContext';
 import { useProfiles } from '../../hooks/useProfiles';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Trash2, Search, Calendar, Plus, CreditCard, Edit2, ChevronLeft, ChevronRight, FileText, CheckCircle, Clock, Check, Layers, Filter, Tag, ArrowUp, ArrowDown, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Trash2, Search, Calendar, Plus, CreditCard, Edit2, ChevronLeft, ChevronRight, FileText, FileSpreadsheet, CheckCircle, Clock, Check, Layers, Filter, Tag, ArrowUp, ArrowDown, TrendingUp } from 'lucide-react';
 import ImportInvoiceModal from './ImportInvoiceModal';
 import SeriesActionModal from '../../components/SeriesActionModal';
 import { useDashboard } from '../../contexts/DashboardContext';
@@ -270,9 +270,19 @@ export default function TransactionsListView() {
                                 onClick={() => setShowImportModal(true)}
                                 className="btn"
                                 style={{ display: 'inline-flex', alignItems: 'center', gap: isMobile ? '0' : '8px', padding: isMobile ? '8px' : '8px 16px', fontSize: '0.9rem', background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                                title="Importar fatura PDF"
                             >
                                 <FileText size={18} />
-                                {!isMobile && 'Importar'}
+                                {!isMobile && 'Fatura'}
+                            </button>
+                            <button
+                                onClick={() => navigate('/import-csv')}
+                                className="btn"
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: isMobile ? '0' : '8px', padding: isMobile ? '8px' : '8px 16px', fontSize: '0.9rem', background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                                title="Importar CSV"
+                            >
+                                <FileSpreadsheet size={18} />
+                                {!isMobile && 'CSV'}
                             </button>
                             <button
                                 onClick={() => navigate('/add-transaction')}

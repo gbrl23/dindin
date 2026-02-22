@@ -19,6 +19,9 @@ import AccountView from './features/account/AccountView';
 import CalendarView from './features/calendar/CalendarView';
 import LandingPage from './pages/LandingPage';
 import SubscriptionsView from './features/subscriptions/SubscriptionsView';
+import BudgetsView from './features/budgets/BudgetsView';
+import ReportsView from './features/reports/ReportsView';
+import ImportCsvView from './features/import/ImportCsvView';
 
 import MainLayout from './components/layout/MainLayout';
 
@@ -50,7 +53,10 @@ function App() {
             <Route path="/investments" element={<ProtectedRoute><MainLayout><InvestmentsView /></MainLayout></ProtectedRoute>} />
             <Route path="/calendar" element={<ProtectedRoute><MainLayout><CalendarView /></MainLayout></ProtectedRoute>} />
             <Route path="/subscriptions" element={<ProtectedRoute><MainLayout><SubscriptionsView /></MainLayout></ProtectedRoute>} />
+            <Route path="/budgets" element={<ProtectedRoute><MainLayout><BudgetsView /></MainLayout></ProtectedRoute>} />
+            <Route path="/reports" element={<ProtectedRoute><MainLayout><ReportsView /></MainLayout></ProtectedRoute>} />
             <Route path="/edit-transaction/:id" element={<ProtectedRoute><MainLayout><AddTransactionView /></MainLayout></ProtectedRoute>} />
+            <Route path="/import-csv" element={<ProtectedRoute><MainLayout><ImportCsvView /></MainLayout></ProtectedRoute>} />
             <Route path="/account" element={<ProtectedRoute><MainLayout><AccountView /></MainLayout></ProtectedRoute>} />
 
             <Route path="*" element={<Navigate to="/" replace />} />

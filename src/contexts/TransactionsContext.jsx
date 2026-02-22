@@ -87,7 +87,8 @@ export const TransactionsProvider = ({ children }) => {
                 series_id: t.series_id || null,
                 is_paid: t.is_paid || false,
                 goal_id: t.goal_id || null,
-                competence_date: t.competence_date || null
+                competence_date: t.competence_date || null,
+                import_id: t.import_id || null
             }));
 
             const { data: createdTransactions, error: transError } = await supabase

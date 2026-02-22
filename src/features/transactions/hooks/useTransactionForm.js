@@ -6,7 +6,7 @@ import { useCards } from '../../../hooks/useCards';
 import { useGroups } from '../../../hooks/useGroups';
 import { useCategories } from '../../../hooks/useCategories';
 import { useGoals } from '../../../hooks/useGoals';
-import { getTodayLocal, formatLocalDate } from '../../../utils/dateUtils';
+import { getTodayLocal, formatLocalDate, getInvoiceMonth } from '../../../utils/dateUtils';
 import { validateAll, validateAmount, validateDescription, validateDate } from '../../../utils/validation';
 
 export function useTransactionForm({ onSaveSuccess, initialData = null, initialType = 'expense' } = {}) {
@@ -116,11 +116,20 @@ export function useTransactionForm({ onSaveSuccess, initialData = null, initialT
                 if (isCancelled) return;
 
                 if (members && members.length > 0) {
-                    setSelectedProfiles(members.map(m => ({
+                    const groupMembersMapped = members.map(m => ({
                         ...m,
                         isSelected: true,
                         isOwner: m.user_id === user?.id
-                    })));
+                    }));
+
+                    // Add ghost profiles created by the user so they can be selected in the group split
+                    const myGhostProfiles = profiles.filter(p => !p.user_id && p.created_by === myDefaultProfile?.id).map(p => ({
+                        ...p,
+                        isSelected: false,
+                        isOwner: false
+                    }));
+
+                    setSelectedProfiles([...groupMembersMapped, ...myGhostProfiles]);
 
                     const meInGroup = members.find(m => m.user_id === user?.id);
                     if (meInGroup) setPayerId(meInGroup.id);
@@ -203,20 +212,12 @@ export function useTransactionForm({ onSaveSuccess, initialData = null, initialT
 
             for (let i = 0; i < numInstallments; i++) {
                 const txDate = addMonthsToDate(date, i);
-                const [txYear, txMonth, txDay] = txDate.split('-').map(Number);
-
                 // Invoice Date Calculation
                 let invoiceDate = null;
                 if (type === 'expense' && cardId) {
                     const selectedCard = cards.find(c => c.id === cardId);
                     if (selectedCard?.closing_day) {
-                        let invMonth = txMonth;
-                        let invYear = txYear;
-                        if (txDay >= selectedCard.closing_day) {
-                            invMonth++;
-                            if (invMonth > 12) { invMonth = 1; invYear++; }
-                        }
-                        invoiceDate = `${invYear}-${pad(invMonth)}-01`;
+                        invoiceDate = getInvoiceMonth(txDate, selectedCard.closing_day);
                     }
                 }
 

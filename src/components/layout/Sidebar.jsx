@@ -13,7 +13,9 @@ import {
     X,
     User,
     Calendar,
-    Zap
+    Zap,
+    Target,
+    BarChart3
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -37,6 +39,8 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
         { path: '/cards', icon: <CreditCard size={20} />, label: 'Cartões' },
         { path: '/bills', icon: <FileText size={20} />, label: 'Contas' },
         { path: '/subscriptions', icon: <Zap size={20} />, label: 'Assinaturas' },
+        { path: '/budgets', icon: <Target size={20} />, label: 'Orçamentos' },
+        { path: '/reports', icon: <BarChart3 size={20} />, label: 'Relatorios' },
         { path: '/investments', icon: <TrendingUp size={20} />, label: 'Investimentos' },
         { path: '/groups', icon: <Users size={20} />, label: 'Grupos' },
         { path: '/profiles', icon: <User size={20} />, label: 'Perfis' },

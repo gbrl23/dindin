@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { ArrowLeft, Plus, Users, DollarSign, Settings, UserPlus, Trash2, Save, X, Receipt, LogOut } from 'lucide-react';
+import { parseLocalDate } from '../../utils/dateUtils';
 
 export default function GroupDetailsView() {
     const { id: groupId } = useParams();
@@ -41,22 +42,16 @@ export default function GroupDetailsView() {
         return groupTransactions.filter(t => selectedMembers.includes(t.payer_id));
     }, [groupTransactions, selectedMembers]);
 
-    // Fetch group transactions with date range filter
     const fetchGroupTransactions = async () => {
         setLoadingTransactions(true);
         try {
-            const year = selectedDate.getFullYear();
-            const month = selectedDate.getMonth();
-            const startDate = new Date(year, month, 1);
-            const endDate = new Date(year, month + 1, 1);
-
-            const startStr = startDate.toISOString().split('T')[0];
-            const endStr = endDate.toISOString().split('T')[0];
+            const selectedMonth = selectedDate.getMonth();
+            const selectedYear = selectedDate.getFullYear();
 
             const { data, error } = await supabase
                 .from('transactions')
                 .select(`
-                    id, description, amount, date, payer_id, card_id, type,
+                    id, description, amount, date, invoice_date, competence_date, payer_id, card_id, type,
                     payer:profiles!payer_id(full_name),
                     transaction_shares(
                         profile_id,
@@ -66,13 +61,24 @@ export default function GroupDetailsView() {
                 `)
                 .eq('group_id', groupId)
                 .eq('type', 'expense')
-                .gte('date', startStr)
-                .lt('date', endStr)
                 .order('date', { ascending: false });
 
             if (error) throw error;
 
-            const normalized = (data || []).map(t => ({
+            const isSelectedMonth = (tx) => {
+                let dateToUse = tx.date;
+                if (tx.type === 'expense' && tx.card_id && tx.invoice_date) {
+                    dateToUse = tx.invoice_date;
+                } else if (tx.competence_date) {
+                    dateToUse = tx.competence_date;
+                }
+                const d = parseLocalDate(dateToUse);
+                return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
+            };
+
+            const filteredData = (data || []).filter(isSelectedMonth);
+
+            const normalized = filteredData.map(t => ({
                 ...t,
                 people_count: t.transaction_shares?.length ?? 0,
                 shares_total: (t.transaction_shares ?? []).reduce((sum, sh) => sum + Number(sh.share_amount), 0)
@@ -365,7 +371,7 @@ export default function GroupDetailsView() {
                 <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '8px', scrollbarWidth: 'none' }}>
                     {members.map(m => (
                         <div
-                            key={m.user_id}
+                            key={m.id}
                             style={{
                                 display: 'flex',
                                 flexDirection: 'column',

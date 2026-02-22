@@ -24,6 +24,7 @@ import { parseLocalDate, displayDate } from '../../utils/dateUtils';
 import { useBalanceCalculator } from '../../hooks/useBalanceCalculator';
 import DindinTip from '../../components/common/DindinTip';
 import CategoryPieChart from '../../components/CategoryPieChart';
+import BudgetDashboardWidget from '../budgets/BudgetDashboardWidget';
 import { hapticFeedback } from '../../utils/haptic';
 
 export default function DashboardView() {
@@ -611,6 +612,9 @@ export default function DashboardView() {
                         </div>
                     </div>
 
+
+                    {/* Budget Widget */}
+                    <BudgetDashboardWidget />
 
                     {/* Upcoming Bills Widget */}
                     <div>

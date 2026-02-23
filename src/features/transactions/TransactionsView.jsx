@@ -851,7 +851,7 @@ export default function TransactionsView() {
                                             </td>
                                             <td style={{ padding: '16px', fontWeight: '600' }}>{t.description}</td>
                                             <td style={{ padding: '16px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                                                {displayDate(t.date)}
+                                                {displayDateShort(t.date)}
                                             </td>
                                             <td style={{ padding: '16px' }}>
                                                 {t.category_details ? (

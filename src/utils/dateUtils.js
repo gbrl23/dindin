@@ -1,95 +1,101 @@
-// Date utilities for timezone-safe date handling
+import { format } from 'date-fns';
 
 /**
- * Format a Date object to YYYY-MM-DD string using LOCAL timezone
- * This avoids the timezone shift issue caused by toISOString() which uses UTC
- * @param {Date} d - Date object to format
- * @returns {string} Date string in YYYY-MM-DD format
- */
-export const formatLocalDate = (d) => {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-};
-
-/**
- * Get today's date as YYYY-MM-DD string in local timezone
- * @returns {string} Today's date in YYYY-MM-DD format
+ * Returns today's date as YYYY-MM-DD string using local timezone.
  */
 export const getTodayLocal = () => formatLocalDate(new Date());
 
 /**
- * Parse a YYYY-MM-DD string into a Date object in LOCAL timezone
- * This avoids the timezone shift issue when parsing date strings
- * @param {string} dateStr - Date string in YYYY-MM-DD format
- * @returns {Date} Date object set to noon local time
+ * Formats a Date object to YYYY-MM-DD string using local timezone.
+ */
+export const formatLocalDate = (date) => {
+    const d = new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+/**
+ * Parses a YYYY-MM-DD string into a local Date object (not UTC).
  */
 export const parseLocalDate = (dateStr) => {
     if (!dateStr) return new Date();
     const [year, month, day] = dateStr.split('-').map(Number);
-    // Set to noon to avoid any DST edge cases
-    return new Date(year, month - 1, day, 12, 0, 0);
+    return new Date(year, month - 1, day);
 };
 
 /**
- * Display a date string (YYYY-MM-DD) in pt-BR format
- * @param {string} dateStr - Date string in YYYY-MM-DD format
- * @param {Object} options - Intl.DateTimeFormat options
- * @returns {string} Formatted date string
+ * Displays a date string in pt-BR format.
  */
-export const displayDate = (dateStr, options = {}) => {
+export const displayDate = (dateStr, options = { day: '2-digit', month: 'long', year: 'numeric' }) => {
     if (!dateStr) return '';
-    const date = parseLocalDate(dateStr);
-    return date.toLocaleDateString('pt-BR', options);
+    try {
+        const date = parseLocalDate(dateStr);
+        return date.toLocaleDateString('pt-BR', options);
+    } catch (e) {
+        return dateStr;
+    }
 };
 
 /**
- * Display a date string as DD/MM format
- * @param {string} dateStr - Date string in YYYY-MM-DD format
- * @returns {string} Date in DD/MM format
+ * Displays a date in short format (DD/MM).
  */
 export const displayDateShort = (dateStr) => {
     if (!dateStr) return '';
-    const [, month, day] = dateStr.split('-');
-    return `${day}/${month}`;
+    try {
+        const date = parseLocalDate(dateStr);
+        return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    } catch (e) {
+        return dateStr;
+    }
 };
 
 /**
- * Calculate the invoice month for a card transaction based on closing day.
- * Brazilian credit card logic:
- * - Purchases BEFORE the closing day → go into the invoice that CLOSES this month, DUE next month
- * - Purchases ON or AFTER the closing day → go into the invoice that CLOSES next month, DUE the month after
- * 
- * The returned date represents the PAYMENT month (when the bill is due).
+ * Calculates the invoice month for a Brazilian credit card transaction.
  *
- * Example: Card closes day 28, due day 5
- * - Purchase on Feb 23 (before 28) → closes Feb 28 → due Mar 5 → returns 2026-03-01
- * - Purchase on Feb 28 (on closing) → closes Mar 28 → due Apr 5 → returns 2026-04-01
+ * Brazilian credit card billing cycle model:
+ * - A card with closing day C has billing cycles:
+ *   - "Month M invoice" covers: day C+1 of month M-1  →  day C of month M
+ *   - Example (closing day 10):
+ *     - "March invoice" cycle: Feb 11 → Mar 10
+ *     - "February invoice" cycle: Jan 11 → Feb 10
  *
- * @param {string} transactionDate - Transaction date in YYYY-MM-DD format
- * @param {number} closingDay - Card closing day (1-31)
- * @returns {string|null} Invoice date as YYYY-MM-01 or null if inputs are invalid
+ * Formula:
+ *   - If purchase day <= closing day → invoice month = current month
+ *   - If purchase day >  closing day → invoice month = next month
+ *
+ * Examples (closing day 10):
+ *   - Purchase Feb 05 (day 5  <= 10) → February
+ *   - Purchase Feb 10 (day 10 <= 10) → February
+ *   - Purchase Feb 15 (day 15 >  10) → March
+ *   - Purchase Feb 21 (day 21 >  10) → March
+ *
+ * Examples (closing day 28):
+ *   - Purchase Feb 23 (day 23 <= 28) → February
+ *   - Purchase Jan 30 (day 30 >  28) → February (Jan+1)
+ *
+ * @param {string} dateStr - Transaction date in YYYY-MM-DD format
+ * @param {number} closingDay - Card's closing day (1-31)
+ * @returns {string} Invoice month in YYYY-MM format, or null if invalid
  */
-export const getInvoiceMonth = (transactionDate, closingDay) => {
-    if (!transactionDate || !closingDay) return null;
+export const getInvoiceMonth = (dateStr, closingDay) => {
+    if (!dateStr || !closingDay) return null;
 
-    const [txYear, txMonth, txDay] = transactionDate.split('-').map(Number);
-    if (!txYear || !txMonth || !txDay) return null;
+    const date = parseLocalDate(dateStr);
+    const day = date.getDate();
+    const month = date.getMonth(); // 0-indexed
+    const year = date.getFullYear();
 
-    let invMonth = txMonth + 1; // Base: next month (invoice closes this month, due next)
-    let invYear = txYear;
+    let invoiceMonth;
 
-    if (txDay >= closingDay) {
-        invMonth++; // Missed this month's closing, goes to next cycle
+    if (day <= closingDay) {
+        // Purchase is within the current billing cycle → same month
+        invoiceMonth = new Date(year, month, 1);
+    } else {
+        // Purchase is after closing → falls into next month's cycle
+        invoiceMonth = new Date(year, month + 1, 1);
     }
 
-    // Handle year overflow
-    while (invMonth > 12) {
-        invMonth -= 12;
-        invYear++;
-    }
-
-    const pad = (n) => String(n).padStart(2, '0');
-    return `${invYear}-${pad(invMonth)}-01`;
+    return format(invoiceMonth, 'yyyy-MM');
 };

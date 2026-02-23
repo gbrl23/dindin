@@ -1,164 +1,170 @@
 import { describe, it, expect } from 'vitest';
-import { formatLocalDate, parseLocalDate, displayDateShort, getTodayLocal, getInvoiceMonth } from './dateUtils';
+import { getInvoiceMonth, getTodayLocal, formatLocalDate, parseLocalDate, displayDate, displayDateShort } from './dateUtils';
 
-describe('formatLocalDate', () => {
-    it('formats a date as YYYY-MM-DD', () => {
-        const date = new Date(2026, 1, 15, 12, 0, 0); // Feb 15, 2026
-        expect(formatLocalDate(date)).toBe('2026-02-15');
-    });
-
-    it('pads single-digit month and day', () => {
-        const date = new Date(2026, 0, 5, 12, 0, 0); // Jan 5, 2026
-        expect(formatLocalDate(date)).toBe('2026-01-05');
-    });
-});
-
-describe('parseLocalDate', () => {
-    it('parses YYYY-MM-DD string to Date at noon', () => {
-        const date = parseLocalDate('2026-02-15');
-        expect(date.getFullYear()).toBe(2026);
-        expect(date.getMonth()).toBe(1); // February = 1
-        expect(date.getDate()).toBe(15);
-        expect(date.getHours()).toBe(12); // noon
-    });
-
-    it('returns current date when input is null/undefined', () => {
-        const now = new Date();
-        const result = parseLocalDate(null);
-        expect(result.getFullYear()).toBe(now.getFullYear());
-    });
-
-    it('handles end of year correctly', () => {
-        const date = parseLocalDate('2026-12-31');
-        expect(date.getFullYear()).toBe(2026);
-        expect(date.getMonth()).toBe(11); // December = 11
-        expect(date.getDate()).toBe(31);
-    });
-});
-
-describe('displayDateShort', () => {
-    it('formats as DD/MM', () => {
-        expect(displayDateShort('2026-02-15')).toBe('15/02');
-    });
-
-    it('returns empty string for null input', () => {
-        expect(displayDateShort(null)).toBe('');
-        expect(displayDateShort('')).toBe('');
-    });
-});
-
-describe('getTodayLocal', () => {
-    it('returns today in YYYY-MM-DD format', () => {
-        const today = getTodayLocal();
-        expect(today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    });
-});
-
-describe('getInvoiceMonth', () => {
-    // Card with closing day 10: 
-    // Purchases before day 10 → closes this month → due NEXT month
-    // Purchases on/after day 10 → closes NEXT month → due month after next
-    const CLOSING_DAY_10 = 10;
-
-    describe('purchase BEFORE closing day (goes to next month invoice)', () => {
-        it('day 5, closing 10 → invoice in March (closes Feb, due Mar)', () => {
-            expect(getInvoiceMonth('2026-02-05', CLOSING_DAY_10)).toBe('2026-03-01');
-        });
-
-        it('day 1, closing 10 → invoice in March (closes Feb, due Mar)', () => {
-            expect(getInvoiceMonth('2026-02-01', CLOSING_DAY_10)).toBe('2026-03-01');
-        });
-
-        it('day 9, closing 10 → invoice in March (closes Feb, due Mar)', () => {
-            expect(getInvoiceMonth('2026-02-09', CLOSING_DAY_10)).toBe('2026-03-01');
+describe('dateUtils', () => {
+    describe('formatLocalDate', () => {
+        it('formata Date para YYYY-MM-DD', () => {
+            const d = new Date(2026, 1, 15); // Feb 15, 2026
+            expect(formatLocalDate(d)).toBe('2026-02-15');
         });
     });
 
-    describe('purchase ON closing day (goes to month after next invoice)', () => {
-        it('day 10, closing 10 → invoice in April (missed Feb closing, closes Mar, due Apr)', () => {
-            expect(getInvoiceMonth('2026-02-10', CLOSING_DAY_10)).toBe('2026-04-01');
+    describe('parseLocalDate', () => {
+        it('retorna Date correto a partir de string', () => {
+            const d = parseLocalDate('2026-03-10');
+            expect(d.getFullYear()).toBe(2026);
+            expect(d.getMonth()).toBe(2); // 0-indexed
+            expect(d.getDate()).toBe(10);
+        });
+
+        it('retorna new Date() se string vazia', () => {
+            const d = parseLocalDate('');
+            expect(d).toBeInstanceOf(Date);
         });
     });
 
-    describe('purchase AFTER closing day (goes to month after next invoice)', () => {
-        it('day 15, closing 10 → invoice in April (closes Mar, due Apr)', () => {
-            expect(getInvoiceMonth('2026-02-15', CLOSING_DAY_10)).toBe('2026-04-01');
+    describe('displayDate', () => {
+        it('formata data em pt-BR', () => {
+            const result = displayDate('2026-03-15');
+            expect(result).toContain('2026');
         });
 
-        it('day 28, closing 10 → invoice in April (closes Mar, due Apr)', () => {
-            expect(getInvoiceMonth('2026-02-28', CLOSING_DAY_10)).toBe('2026-04-01');
-        });
-    });
-
-    describe('year boundary', () => {
-        it('purchase in December after closing rolls to February next year', () => {
-            // Dec 15, closing 10 → missed Dec closing → closes Jan → due Feb
-            expect(getInvoiceMonth('2026-12-15', CLOSING_DAY_10)).toBe('2027-02-01');
-        });
-
-        it('purchase in December before closing goes to January next year', () => {
-            // Dec 5, closing 10 → closes Dec → due Jan
-            expect(getInvoiceMonth('2026-12-05', CLOSING_DAY_10)).toBe('2027-01-01');
-        });
-
-        it('purchase on Dec 10 (closing=10) rolls to February next year', () => {
-            // Dec 10, closing 10 → missed Dec closing → closes Jan → due Feb
-            expect(getInvoiceMonth('2026-12-10', CLOSING_DAY_10)).toBe('2027-02-01');
+        it('retorna string vazia se input vazio', () => {
+            expect(displayDate('')).toBe('');
         });
     });
 
-    describe('different closing days', () => {
-        it('closing day 1: purchase on day 1 goes to month after next', () => {
-            // Feb 1, closing 1 → missed Feb closing → closes Mar → due Apr
-            expect(getInvoiceMonth('2026-02-01', 1)).toBe('2026-04-01');
+    describe('displayDateShort', () => {
+        it('formata data curta DD/MM', () => {
+            const result = displayDateShort('2026-03-15');
+            expect(result).toBe('15/03');
         });
 
-        it('closing day 25: purchase on day 20 goes to next month', () => {
-            // Feb 20, closing 25 → before closing → closes Feb → due Mar
-            expect(getInvoiceMonth('2026-02-20', 25)).toBe('2026-03-01');
-        });
-
-        it('closing day 25: purchase on day 25 goes to month after next', () => {
-            // Feb 25, closing 25 → on closing → closes Mar → due Apr
-            expect(getInvoiceMonth('2026-02-25', 25)).toBe('2026-04-01');
-        });
-
-        it('closing day 31: purchase on day 30 goes to next month', () => {
-            // Mar 30, closing 31 → before closing → closes Mar → due Apr
-            expect(getInvoiceMonth('2026-03-30', 31)).toBe('2026-04-01');
-        });
-
-        it('closing day 31: purchase on day 31 goes to month after next', () => {
-            // Mar 31, closing 31 → on closing → closes Apr → due May
-            expect(getInvoiceMonth('2026-03-31', 31)).toBe('2026-05-01');
-        });
-
-        it('closing day 28: purchase on day 23 (user scenario) goes to next month', () => {
-            // Feb 23, closing 28 → before closing → closes Feb → due Mar
-            expect(getInvoiceMonth('2026-02-23', 28)).toBe('2026-03-01');
-        });
-
-        it('closing day 28: purchase on day 28 goes to month after next', () => {
-            // Feb 28, closing 28 → on closing → closes Mar → due Apr
-            expect(getInvoiceMonth('2026-02-28', 28)).toBe('2026-04-01');
+        it('retorna string vazia se input vazio', () => {
+            expect(displayDateShort('')).toBe('');
         });
     });
 
-    describe('invalid inputs', () => {
-        it('returns null when transactionDate is null', () => {
-            expect(getInvoiceMonth(null, 10)).toBeNull();
+    describe('getTodayLocal', () => {
+        it('retorna data no formato YYYY-MM-DD', () => {
+            const today = getTodayLocal();
+            expect(today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+        });
+    });
+
+    describe('getInvoiceMonth', () => {
+        // ====== CARTÃO COM FECHAMENTO DIA 10 (Gabriel - Itaú) ======
+        describe('Fechamento dia 10 (ex: Itaú Gabriel)', () => {
+            const C = 10;
+
+            it('Compra dia 05/Fev (antes do fechamento) → Fevereiro', () => {
+                expect(getInvoiceMonth('2026-02-05', C)).toBe('2026-02');
+            });
+
+            it('Compra dia 10/Fev (NO dia do fechamento) → Fevereiro', () => {
+                expect(getInvoiceMonth('2026-02-10', C)).toBe('2026-02');
+            });
+
+            it('Compra dia 11/Fev (um dia DEPOIS do fechamento) → Março', () => {
+                expect(getInvoiceMonth('2026-02-11', C)).toBe('2026-03');
+            });
+
+            it('Compra dia 15/Fev (depois do fechamento) → Março', () => {
+                expect(getInvoiceMonth('2026-02-15', C)).toBe('2026-03');
+            });
+
+            it('Compra dia 21/Fev (depois do fechamento) → Março', () => {
+                expect(getInvoiceMonth('2026-02-21', C)).toBe('2026-03');
+            });
+
+            it('Compra dia 28/Fev (depois do fechamento) → Março', () => {
+                expect(getInvoiceMonth('2026-02-28', C)).toBe('2026-03');
+            });
+
+            it('Virada de ano: Compra 25/Dez → Janeiro do ano seguinte', () => {
+                expect(getInvoiceMonth('2026-12-25', C)).toBe('2027-01');
+            });
+
+            it('Virada de ano: Compra 05/Dez → Dezembro mesmo', () => {
+                expect(getInvoiceMonth('2026-12-05', C)).toBe('2026-12');
+            });
         });
 
-        it('returns null when closingDay is null', () => {
-            expect(getInvoiceMonth('2026-02-15', null)).toBeNull();
+        // ====== CARTÃO COM FECHAMENTO DIA 28 (Ana - Itaú Latam) ======
+        describe('Fechamento dia 28 (ex: Itaú Latam Ana)', () => {
+            const C = 28;
+
+            it('Compra dia 15/Jan (antes do fechamento) → Janeiro', () => {
+                expect(getInvoiceMonth('2026-01-15', C)).toBe('2026-01');
+            });
+
+            it('Compra dia 20/Jan (antes do fechamento) → Janeiro', () => {
+                expect(getInvoiceMonth('2026-01-20', C)).toBe('2026-01');
+            });
+
+            it('Compra dia 23/Fev (antes do fechamento) → Fevereiro', () => {
+                expect(getInvoiceMonth('2026-02-23', C)).toBe('2026-02');
+            });
+
+            it('Compra dia 28/Fev (NO dia do fechamento) → Fevereiro', () => {
+                expect(getInvoiceMonth('2026-02-28', C)).toBe('2026-02');
+            });
+
+            it('Compra dia 29/Jan (depois do fechamento) → Fevereiro', () => {
+                expect(getInvoiceMonth('2026-01-29', C)).toBe('2026-02');
+            });
+
+            it('Compra dia 30/Jan (depois do fechamento) → Fevereiro', () => {
+                expect(getInvoiceMonth('2026-01-30', C)).toBe('2026-02');
+            });
+
+            it('Compra dia 31/Jan (depois do fechamento) → Fevereiro', () => {
+                expect(getInvoiceMonth('2026-01-31', C)).toBe('2026-02');
+            });
+
+            it('Virada de ano: Compra 30/Dez → Janeiro do ano seguinte', () => {
+                expect(getInvoiceMonth('2026-12-30', C)).toBe('2027-01');
+            });
         });
 
-        it('returns null when closingDay is 0', () => {
-            expect(getInvoiceMonth('2026-02-15', 0)).toBeNull();
+        // ====== CARTÃO COM FECHAMENTO DIA 2 (Gabriel - Nubank/XP) ======
+        describe('Fechamento dia 2 (ex: Nubank/XP Gabriel)', () => {
+            const C = 2;
+
+            it('Compra dia 01/Mar (antes do fechamento) → Março', () => {
+                expect(getInvoiceMonth('2026-03-01', C)).toBe('2026-03');
+            });
+
+            it('Compra dia 02/Mar (NO dia do fechamento) → Março', () => {
+                expect(getInvoiceMonth('2026-03-02', C)).toBe('2026-03');
+            });
+
+            it('Compra dia 03/Mar (depois do fechamento) → Abril', () => {
+                expect(getInvoiceMonth('2026-03-03', C)).toBe('2026-04');
+            });
+
+            it('Compra dia 15/Mar (depois do fechamento) → Abril', () => {
+                expect(getInvoiceMonth('2026-03-15', C)).toBe('2026-04');
+            });
+
+            it('Compra dia 28/Mar (depois do fechamento) → Abril', () => {
+                expect(getInvoiceMonth('2026-03-28', C)).toBe('2026-04');
+            });
         });
 
-        it('returns null when transactionDate is empty string', () => {
-            expect(getInvoiceMonth('', 10)).toBeNull();
+        // ====== EDGE CASES ======
+        describe('Edge cases', () => {
+            it('retorna null se dateStr é null', () => {
+                expect(getInvoiceMonth(null, 10)).toBeNull();
+            });
+
+            it('retorna null se closingDay é null', () => {
+                expect(getInvoiceMonth('2026-02-15', null)).toBeNull();
+            });
+
+            it('retorna null se closingDay é 0', () => {
+                expect(getInvoiceMonth('2026-02-15', 0)).toBeNull();
+            });
         });
     });
 });

@@ -465,7 +465,7 @@ export default function AccountView() {
                             <div>
                                 <span style={{ fontWeight: '600' }}>Salário / Renda Mensal</span>
                                 <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
-                                    Definir valor base do mês
+                                    Configure como e quando você recebe
                                 </p>
                             </div>
                         </div>
@@ -488,14 +488,14 @@ export default function AccountView() {
                         }}>
                             {/* Salary Type Selector */}
                             <div style={{ marginBottom: '20px' }}>
-                                <label style={{ display: 'block', color: 'var(--text-secondary)', marginBottom: '10px', fontSize: '0.9rem' }}>
+                                <label style={{ display: 'block', color: 'var(--text-secondary)', marginBottom: '10px', fontSize: '0.9rem', fontWeight: '500' }}>
                                     Como você recebe?
                                 </label>
                                 <div style={{ display: 'flex', gap: '8px' }}>
                                     {[
-                                        { value: 'full', label: 'Inteiro' },
-                                        { value: 'biweekly', label: '15 em 15' },
-                                        { value: 'custom', label: 'Personalizado' }
+                                        { value: 'full', label: 'Inteiro', icon: '💰' },
+                                        { value: 'biweekly', label: '15 em 15', icon: '📅' },
+                                        { value: 'custom', label: 'Outro', icon: '⚙️' }
                                     ].map(opt => (
                                         <button
                                             key={opt.value}
@@ -517,27 +517,37 @@ export default function AccountView() {
                                             }}
                                             style={{
                                                 flex: 1,
-                                                padding: '10px 12px',
-                                                borderRadius: '10px',
+                                                padding: '12px 12px',
+                                                borderRadius: '12px',
                                                 border: salaryType === opt.value ? '2px solid var(--primary)' : '1px solid var(--border)',
                                                 background: salaryType === opt.value ? 'rgba(99, 102, 241, 0.1)' : 'var(--bg-card)',
                                                 color: salaryType === opt.value ? 'var(--primary)' : 'var(--text-secondary)',
                                                 fontWeight: salaryType === opt.value ? '600' : '400',
                                                 fontSize: '0.85rem',
                                                 cursor: 'pointer',
-                                                transition: 'all 0.2s'
+                                                transition: 'all 0.2s',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: 'center',
+                                                gap: '4px'
                                             }}
                                         >
+                                            <span style={{ fontSize: '1.2rem' }}>{opt.icon}</span>
                                             {opt.label}
                                         </button>
                                     ))}
                                 </div>
+                                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '10px', lineHeight: '1.4' }}>
+                                    {salaryType === 'full' && 'Você recebe tudo de uma vez em um dia do mês.'}
+                                    {salaryType === 'biweekly' && 'Você recebe em duas partes, geralmente no dia 5 e 20.'}
+                                    {salaryType === 'custom' && 'Configure livremente quantas parcelas recebe e em quais dias.'}
+                                </p>
                             </div>
 
                             {/* Full: Single salary input */}
                             {salaryType === 'full' && (
                                 <div style={{ marginBottom: '16px' }}>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr', gap: '12px' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr', gap: '12px' }}>
                                         <div>
                                             <label style={{ display: 'block', color: 'var(--text-secondary)', marginBottom: '8px', fontSize: '0.85rem' }}>
                                                 Dia
@@ -573,19 +583,23 @@ export default function AccountView() {
                                     {salaryParts.map((part, i) => (
                                         <div key={i} style={{
                                             display: 'grid',
-                                            gridTemplateColumns: salaryType === 'custom' ? '100px 1fr 40px' : '100px 1fr',
+                                            gridTemplateColumns: salaryType === 'custom' ? '90px 1fr 40px' : '90px 1fr',
                                             gap: '12px',
-                                            marginBottom: '12px',
+                                            marginBottom: i < salaryParts.length - 1 ? '16px' : '12px',
                                             alignItems: 'end'
                                         }}>
                                             <div>
                                                 <label style={{ display: 'block', color: 'var(--text-secondary)', marginBottom: '8px', fontSize: '0.85rem' }}>
-                                                    {i === 0 ? 'Dia' : `Dia ${i + 1}`}
+                                                    {salaryType === 'biweekly'
+                                                        ? (i === 0 ? '1ª parcela' : '2ª parcela')
+                                                        : `${i + 1}ª parcela`
+                                                    }
                                                 </label>
                                                 <input
                                                     type="number" min="1" max="31"
                                                     className="input"
                                                     inputMode="numeric"
+                                                    placeholder="Dia"
                                                     value={part.day}
                                                     onChange={e => {
                                                         const updated = [...salaryParts];
@@ -616,15 +630,20 @@ export default function AccountView() {
                                                     type="button"
                                                     onClick={() => setSalaryParts(salaryParts.filter((_, idx) => idx !== i))}
                                                     style={{
-                                                        background: 'rgba(239, 68, 68, 0.1)',
-                                                        border: 'none',
+                                                        background: 'rgba(239, 68, 68, 0.08)',
+                                                        border: '1px solid rgba(239, 68, 68, 0.15)',
                                                         borderRadius: '10px',
-                                                        padding: '12px',
+                                                        padding: '0',
                                                         color: 'var(--danger)',
                                                         cursor: 'pointer',
-                                                        height: '44px'
+                                                        height: '44px',
+                                                        width: '40px',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        transition: 'all 0.2s'
                                                     }}
-                                                    title="Remover"
+                                                    title="Remover parcela"
                                                 >
                                                     <Trash2 size={16} />
                                                 </button>
@@ -643,11 +662,15 @@ export default function AccountView() {
                                                 borderRadius: '10px',
                                                 border: '1px dashed var(--border)',
                                                 background: 'transparent',
-                                                color: 'var(--text-secondary)',
+                                                color: 'var(--primary)',
                                                 fontSize: '0.85rem',
+                                                fontWeight: '500',
                                                 cursor: 'pointer',
-                                                marginBottom: '12px'
+                                                marginBottom: '12px',
+                                                transition: 'all 0.2s'
                                             }}
+                                            onMouseOver={e => e.currentTarget.style.background = 'rgba(99, 102, 241, 0.05)'}
+                                            onMouseOut={e => e.currentTarget.style.background = 'transparent'}
                                         >
                                             + Adicionar parcela
                                         </button>
@@ -661,18 +684,18 @@ export default function AccountView() {
                                         }, 0);
                                         return (
                                             <div style={{
-                                                padding: '12px 16px',
-                                                borderRadius: '10px',
+                                                padding: '14px 16px',
+                                                borderRadius: '12px',
                                                 background: 'rgba(16, 185, 129, 0.08)',
                                                 border: '1px solid rgba(16, 185, 129, 0.2)',
                                                 display: 'flex',
                                                 justifyContent: 'space-between',
                                                 alignItems: 'center'
                                             }}>
-                                                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                                                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: '500' }}>
                                                     Total mensal
                                                 </span>
-                                                <span style={{ fontSize: '1.1rem', fontWeight: '700', color: 'var(--success)' }}>
+                                                <span style={{ fontSize: '1.15rem', fontWeight: '700', color: 'var(--success)' }}>
                                                     R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                                 </span>
                                             </div>
@@ -685,7 +708,7 @@ export default function AccountView() {
                                 type="submit"
                                 className="btn btn-primary"
                                 disabled={isLoading}
-                                style={{ width: '100%' }}
+                                style={{ width: '100%', marginTop: '4px' }}
                             >
                                 <Save size={18} style={{ marginRight: '8px' }} />
                                 {isLoading ? 'Salvando...' : 'Salvar Renda'}

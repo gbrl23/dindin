@@ -15,28 +15,29 @@ const DashboardContext = createContext({
 });
 
 /**
- * Calculate the financial month based on the user's card closing day.
+ * Calculate the financial month based on the user's card closing day and due day.
  * Uses getInvoiceMonth to determine which month today's purchase would go to.
  * That's the month the dashboard should show.
  */
-function getFinancialMonth(closingDay) {
+function getFinancialMonth(closingDay, dueDay) {
     const today = getTodayLocal(); // YYYY-MM-DD
     if (!closingDay || closingDay <= 0) {
         return new Date(); // No card → current calendar month
     }
-    const invoiceDate = getInvoiceMonth(today, closingDay);
+    const invoiceDate = getInvoiceMonth(today, closingDay, dueDay);
     if (!invoiceDate) return new Date();
 
-    // invoiceDate is YYYY-MM-01, parse it
+    // invoiceDate is YYYY-MM, parse it
     const [year, month] = invoiceDate.split('-').map(Number);
     return new Date(year, month - 1, 1, 12, 0, 0);
 }
 
 export function DashboardProvider({ children }) {
-    // Smart Initial Date: use cached closing_day for instant render
+    // Smart Initial Date: use cached closing_day/due_day for instant render
     const getSmartInitialDate = () => {
         const cachedClosingDay = parseInt(localStorage.getItem('latest_closing_day') || '0');
-        return getFinancialMonth(cachedClosingDay);
+        const cachedDueDay = parseInt(localStorage.getItem('latest_due_day') || '0');
+        return getFinancialMonth(cachedClosingDay, cachedDueDay || undefined);
     };
 
     const [selectedDate, setSelectedDate] = useState(getSmartInitialDate);
@@ -52,13 +53,20 @@ export function DashboardProvider({ children }) {
     useEffect(() => {
         if (cards && Array.isArray(cards) && cards.length > 0) {
             // Use the card with the latest closing day to determine financial month
-            const latestClosingDay = cards.reduce((max, card) => Math.max(max, card.closing_day || 1), 1);
+            const mainCard = cards.reduce((best, card) =>
+                (card.closing_day || 1) > (best.closing_day || 1) ? card : best
+                , cards[0]);
+
+            const latestClosingDay = mainCard.closing_day || 1;
+            const latestDueDay = mainCard.due_day;
+
             localStorage.setItem('latest_closing_day', latestClosingDay.toString());
+            if (latestDueDay) localStorage.setItem('latest_due_day', latestDueDay.toString());
 
             // Only auto-set on first load (don't override user navigation)
             if (!hasInitialized.current) {
                 hasInitialized.current = true;
-                const financialDate = getFinancialMonth(latestClosingDay);
+                const financialDate = getFinancialMonth(latestClosingDay, latestDueDay);
                 setSelectedDate(prev => {
                     // Only update if the month actually differs from what we cached
                     if (prev.getMonth() !== financialDate.getMonth() || prev.getFullYear() !== financialDate.getFullYear()) {

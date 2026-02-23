@@ -52,34 +52,35 @@ export const displayDateShort = (dateStr) => {
 };
 
 /**
- * Calculates the invoice month for a Brazilian credit card transaction.
+ * Calculates the invoice PAYMENT month for a Brazilian credit card transaction.
  *
- * Brazilian credit card billing cycle model:
- * - A card with closing day C has billing cycles:
- *   - "Month M invoice" covers: day C+1 of month M-1  →  day C of month M
- *   - Example (closing day 10):
- *     - "March invoice" cycle: Feb 11 → Mar 10
- *     - "February invoice" cycle: Jan 11 → Feb 10
+ * The "invoice month" = the month the user PAYS the bill.
  *
- * Formula:
- *   - If purchase day <= closing day → invoice month = current month
- *   - If purchase day >  closing day → invoice month = next month
+ * Step 1: Determine which billing cycle the purchase falls into.
+ *   - day <  closingDay → cycle closes on closingDay of the SAME month
+ *   - day >= closingDay → cycle closes on closingDay of the NEXT month
  *
- * Examples (closing day 10):
- *   - Purchase Feb 05 (day 5  <= 10) → February
- *   - Purchase Feb 10 (day 10 <= 10) → February
- *   - Purchase Feb 15 (day 15 >  10) → March
- *   - Purchase Feb 21 (day 21 >  10) → March
+ * Step 2: Determine the PAYMENT month based on the due day.
+ *   - If dueDay >= closingDay → payment is in the SAME month the cycle closes
+ *   - If dueDay <  closingDay → payment is in the MONTH AFTER the cycle closes
  *
- * Examples (closing day 28):
- *   - Purchase Feb 23 (day 23 <= 28) → February
- *   - Purchase Jan 30 (day 30 >  28) → February (Jan+1)
+ * Examples:
+ *
+ * Gabriel (Itaú): closes 10, due 17  (17 >= 10 → no extra offset)
+ *   Feb 05 (day <  10) → cycle closes Feb 10 → pays Feb 17 → "February"
+ *   Feb 15 (day >= 10) → cycle closes Mar 10 → pays Mar 17 → "March"
+ *
+ * Ana (Itaú Latam): closes 28, due 5  (5 < 28 → +1 month offset)
+ *   Feb 23 (day <  28) → cycle closes Feb 28 → pays Mar 5 → "March"
+ *   Jan 30 (day >= 28) → cycle closes Feb 28 → pays Mar 5 → "March"
+ *   Jan 15 (day <  28) → cycle closes Jan 28 → pays Feb 5 → "February"
  *
  * @param {string} dateStr - Transaction date in YYYY-MM-DD format
  * @param {number} closingDay - Card's closing day (1-31)
- * @returns {string} Invoice month in YYYY-MM format, or null if invalid
+ * @param {number} [dueDay] - Card's due day (1-31). If omitted, assumes same-month payment.
+ * @returns {string|null} Invoice payment month in YYYY-MM format, or null if invalid
  */
-export const getInvoiceMonth = (dateStr, closingDay) => {
+export const getInvoiceMonth = (dateStr, closingDay, dueDay) => {
     if (!dateStr || !closingDay) return null;
 
     const date = parseLocalDate(dateStr);
@@ -87,15 +88,13 @@ export const getInvoiceMonth = (dateStr, closingDay) => {
     const month = date.getMonth(); // 0-indexed
     const year = date.getFullYear();
 
-    let invoiceMonth;
+    // Step 1: Which cycle does this purchase belong to?
+    let cycleCloseMonth = (day < closingDay) ? month : month + 1;
 
-    if (day < closingDay) {
-        // Purchase BEFORE closing day → current month's invoice
-        invoiceMonth = new Date(year, month, 1);
-    } else {
-        // Purchase ON or AFTER closing day → next month's invoice
-        invoiceMonth = new Date(year, month + 1, 1);
-    }
+    // Step 2: Payment offset — if due day is before closing day, payment is next month
+    const paymentOffset = (dueDay && dueDay < closingDay) ? 1 : 0;
+
+    const invoiceMonth = new Date(year, cycleCloseMonth + paymentOffset, 1);
 
     return format(invoiceMonth, 'yyyy-MM');
 };

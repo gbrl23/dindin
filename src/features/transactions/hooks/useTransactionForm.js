@@ -217,7 +217,7 @@ export function useTransactionForm({ onSaveSuccess, initialData = null, initialT
                 if (type === 'expense' && cardId) {
                     const selectedCard = cards.find(c => c.id === cardId);
                     if (selectedCard?.closing_day) {
-                        invoiceDate = getInvoiceMonth(txDate, selectedCard.closing_day);
+                        invoiceDate = getInvoiceMonth(txDate, selectedCard.closing_day, selectedCard.due_day);
                     }
                 }
 

@@ -4,7 +4,7 @@ import { getInvoiceMonth, getTodayLocal, formatLocalDate, parseLocalDate, displa
 describe('dateUtils', () => {
     describe('formatLocalDate', () => {
         it('formata Date para YYYY-MM-DD', () => {
-            const d = new Date(2026, 1, 15); // Feb 15, 2026
+            const d = new Date(2026, 1, 15);
             expect(formatLocalDate(d)).toBe('2026-02-15');
         });
     });
@@ -13,7 +13,7 @@ describe('dateUtils', () => {
         it('retorna Date correto a partir de string', () => {
             const d = parseLocalDate('2026-03-10');
             expect(d.getFullYear()).toBe(2026);
-            expect(d.getMonth()).toBe(2); // 0-indexed
+            expect(d.getMonth()).toBe(2);
             expect(d.getDate()).toBe(10);
         });
 
@@ -53,102 +53,110 @@ describe('dateUtils', () => {
     });
 
     describe('getInvoiceMonth', () => {
-        // ====== CARTÃO COM FECHAMENTO DIA 10 (Gabriel - Itaú) ======
-        describe('Fechamento dia 10 (ex: Itaú Gabriel)', () => {
-            const C = 10;
 
-            it('Compra dia 05/Fev (antes do fechamento) → Fevereiro', () => {
-                expect(getInvoiceMonth('2026-02-05', C)).toBe('2026-02');
+        // ====== GABRIEL - Itaú (fecha 10, vence 17) ======
+        // vence 17 >= fecha 10 → pagamento no MESMO mês que fecha → offset 0
+        describe('Itaú Gabriel (fecha 10, vence 17)', () => {
+            const C = 10, D = 17;
+
+            it('Compra 05/Fev (antes do fechamento) → Fevereiro', () => {
+                expect(getInvoiceMonth('2026-02-05', C, D)).toBe('2026-02');
             });
 
-            it('Compra dia 10/Fev (NO dia do fechamento) → Março', () => {
-                expect(getInvoiceMonth('2026-02-10', C)).toBe('2026-03');
+            it('Compra 10/Fev (NO dia do fechamento) → Março', () => {
+                expect(getInvoiceMonth('2026-02-10', C, D)).toBe('2026-03');
             });
 
-            it('Compra dia 11/Fev (um dia DEPOIS do fechamento) → Março', () => {
-                expect(getInvoiceMonth('2026-02-11', C)).toBe('2026-03');
+            it('Compra 11/Fev → Março', () => {
+                expect(getInvoiceMonth('2026-02-11', C, D)).toBe('2026-03');
             });
 
-            it('Compra dia 15/Fev (depois do fechamento) → Março', () => {
-                expect(getInvoiceMonth('2026-02-15', C)).toBe('2026-03');
+            it('Compra 15/Fev → Março', () => {
+                expect(getInvoiceMonth('2026-02-15', C, D)).toBe('2026-03');
             });
 
-            it('Compra dia 21/Fev (depois do fechamento) → Março', () => {
-                expect(getInvoiceMonth('2026-02-21', C)).toBe('2026-03');
+            it('Compra 21/Fev → Março', () => {
+                expect(getInvoiceMonth('2026-02-21', C, D)).toBe('2026-03');
             });
 
-            it('Compra dia 28/Fev (depois do fechamento) → Março', () => {
-                expect(getInvoiceMonth('2026-02-28', C)).toBe('2026-03');
+            it('Virada de ano: 25/Dez → Janeiro 2027', () => {
+                expect(getInvoiceMonth('2026-12-25', C, D)).toBe('2027-01');
             });
 
-            it('Virada de ano: Compra 25/Dez → Janeiro do ano seguinte', () => {
-                expect(getInvoiceMonth('2026-12-25', C)).toBe('2027-01');
-            });
-
-            it('Virada de ano: Compra 05/Dez → Dezembro mesmo', () => {
-                expect(getInvoiceMonth('2026-12-05', C)).toBe('2026-12');
+            it('05/Dez (antes do fechamento) → Dezembro', () => {
+                expect(getInvoiceMonth('2026-12-05', C, D)).toBe('2026-12');
             });
         });
 
-        // ====== CARTÃO COM FECHAMENTO DIA 28 (Ana - Itaú Latam) ======
-        describe('Fechamento dia 28 (ex: Itaú Latam Ana)', () => {
-            const C = 28;
+        // ====== ANA - Itaú Latam (fecha 28, vence 5) ======
+        // vence 5 < fecha 28 → pagamento no MÊS SEGUINTE ao fecha → offset +1
+        describe('Itaú Latam Ana (fecha 28, vence 5)', () => {
+            const C = 28, D = 5;
 
-            it('Compra dia 15/Jan (antes do fechamento) → Janeiro', () => {
-                expect(getInvoiceMonth('2026-01-15', C)).toBe('2026-01');
+            it('Compra 15/Jan (antes do fechamento) → Fevereiro (paga Feb 5)', () => {
+                expect(getInvoiceMonth('2026-01-15', C, D)).toBe('2026-02');
             });
 
-            it('Compra dia 20/Jan (antes do fechamento) → Janeiro', () => {
-                expect(getInvoiceMonth('2026-01-20', C)).toBe('2026-01');
+            it('Compra 20/Jan (antes do fechamento) → Fevereiro', () => {
+                expect(getInvoiceMonth('2026-01-20', C, D)).toBe('2026-02');
             });
 
-            it('Compra dia 23/Fev (antes do fechamento) → Fevereiro', () => {
-                expect(getInvoiceMonth('2026-02-23', C)).toBe('2026-02');
+            it('Compra 23/Fev (antes do fechamento) → Março (paga Mar 5)', () => {
+                expect(getInvoiceMonth('2026-02-23', C, D)).toBe('2026-03');
             });
 
-            it('Compra dia 28/Fev (NO dia do fechamento) → Março', () => {
-                expect(getInvoiceMonth('2026-02-28', C)).toBe('2026-03');
+            it('Compra 28/Fev (NO dia do fechamento) → Abril', () => {
+                expect(getInvoiceMonth('2026-02-28', C, D)).toBe('2026-04');
             });
 
-            it('Compra dia 29/Jan (depois do fechamento) → Fevereiro', () => {
-                expect(getInvoiceMonth('2026-01-29', C)).toBe('2026-02');
+            it('Compra 29/Jan (depois do fechamento) → Março', () => {
+                expect(getInvoiceMonth('2026-01-29', C, D)).toBe('2026-03');
             });
 
-            it('Compra dia 30/Jan (depois do fechamento) → Fevereiro', () => {
-                expect(getInvoiceMonth('2026-01-30', C)).toBe('2026-02');
+            it('Compra 30/Jan (depois do fechamento) → Março', () => {
+                expect(getInvoiceMonth('2026-01-30', C, D)).toBe('2026-03');
             });
 
-            it('Compra dia 31/Jan (depois do fechamento) → Fevereiro', () => {
-                expect(getInvoiceMonth('2026-01-31', C)).toBe('2026-02');
+            it('Compra 31/Jan (depois do fechamento) → Março', () => {
+                expect(getInvoiceMonth('2026-01-31', C, D)).toBe('2026-03');
             });
 
-            it('Virada de ano: Compra 30/Dez → Janeiro do ano seguinte', () => {
-                expect(getInvoiceMonth('2026-12-30', C)).toBe('2027-01');
+            it('Virada de ano: 30/Dez → Fevereiro 2027', () => {
+                expect(getInvoiceMonth('2026-12-30', C, D)).toBe('2027-02');
+            });
+
+            it('Virada de ano: 20/Dez → Janeiro 2027', () => {
+                expect(getInvoiceMonth('2026-12-20', C, D)).toBe('2027-01');
             });
         });
 
-        // ====== CARTÃO COM FECHAMENTO DIA 2 (Gabriel - Nubank/XP) ======
-        describe('Fechamento dia 2 (ex: Nubank/XP Gabriel)', () => {
-            const C = 2;
+        // ====== GABRIEL - Nubank (fecha 2, vence 9) ======
+        // vence 9 >= fecha 2 → pagamento no MESMO mês que fecha → offset 0
+        describe('Nubank Gabriel (fecha 2, vence 9)', () => {
+            const C = 2, D = 9;
 
-            it('Compra dia 01/Mar (antes do fechamento) → Março', () => {
-                expect(getInvoiceMonth('2026-03-01', C)).toBe('2026-03');
+            it('Compra 01/Mar → Março', () => {
+                expect(getInvoiceMonth('2026-03-01', C, D)).toBe('2026-03');
             });
 
-            it('Compra dia 02/Mar (NO dia do fechamento) → Abril', () => {
-                expect(getInvoiceMonth('2026-03-02', C)).toBe('2026-04');
+            it('Compra 02/Mar (NO fechamento) → Abril', () => {
+                expect(getInvoiceMonth('2026-03-02', C, D)).toBe('2026-04');
             });
 
-            it('Compra dia 03/Mar (depois do fechamento) → Abril', () => {
-                expect(getInvoiceMonth('2026-03-03', C)).toBe('2026-04');
+            it('Compra 03/Mar → Abril', () => {
+                expect(getInvoiceMonth('2026-03-03', C, D)).toBe('2026-04');
             });
 
-            it('Compra dia 15/Mar (depois do fechamento) → Abril', () => {
-                expect(getInvoiceMonth('2026-03-15', C)).toBe('2026-04');
+            it('Compra 15/Mar → Abril', () => {
+                expect(getInvoiceMonth('2026-03-15', C, D)).toBe('2026-04');
             });
+        });
 
-            it('Compra dia 28/Mar (depois do fechamento) → Abril', () => {
-                expect(getInvoiceMonth('2026-03-28', C)).toBe('2026-04');
+        // ====== SEM dueDay (backward compatibility) ======
+        describe('Sem dueDay (compatibilidade)', () => {
+            it('Funciona sem dueDay (offset 0)', () => {
+                expect(getInvoiceMonth('2026-02-05', 10)).toBe('2026-02');
+                expect(getInvoiceMonth('2026-02-15', 10)).toBe('2026-03');
             });
         });
 

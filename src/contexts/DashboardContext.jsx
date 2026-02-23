@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useCards } from '../hooks/useCards';
+import { getInvoiceMonth, getTodayLocal } from '../utils/dateUtils';
 
 const DashboardContext = createContext({
     selectedDate: new Date(),
@@ -13,37 +14,59 @@ const DashboardContext = createContext({
     modalType: 'expense'
 });
 
-export function DashboardProvider({ children }) {
-    // Smart Initial Date Logic
-    const getSmartInitialDate = () => {
-        const today = new Date();
-        const currentDay = today.getDate();
-        const cachedClosingDay = parseInt(localStorage.getItem('latest_closing_day') || '0');
+/**
+ * Calculate the financial month based on the user's card closing day.
+ * Uses getInvoiceMonth to determine which month today's purchase would go to.
+ * That's the month the dashboard should show.
+ */
+function getFinancialMonth(closingDay) {
+    const today = getTodayLocal(); // YYYY-MM-DD
+    if (!closingDay || closingDay <= 0) {
+        return new Date(); // No card → current calendar month
+    }
+    const invoiceDate = getInvoiceMonth(today, closingDay);
+    if (!invoiceDate) return new Date();
 
-        if (cachedClosingDay > 0 && currentDay >= cachedClosingDay) {
-            const nextMonth = new Date(today);
-            nextMonth.setMonth(today.getMonth() + 1);
-            return nextMonth;
-        }
-        return today;
+    // invoiceDate is YYYY-MM-01, parse it
+    const [year, month] = invoiceDate.split('-').map(Number);
+    return new Date(year, month - 1, 1, 12, 0, 0);
+}
+
+export function DashboardProvider({ children }) {
+    // Smart Initial Date: use cached closing_day for instant render
+    const getSmartInitialDate = () => {
+        const cachedClosingDay = parseInt(localStorage.getItem('latest_closing_day') || '0');
+        return getFinancialMonth(cachedClosingDay);
     };
 
-    const [selectedDate, setSelectedDate] = useState(getSmartInitialDate());
+    const [selectedDate, setSelectedDate] = useState(getSmartInitialDate);
+    const hasInitialized = useRef(false);
 
     // Modal State
     const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
-    const [modalType, setModalType] = useState('expense'); // expense, income, investment, bill
+    const [modalType, setModalType] = useState('expense');
 
     const { cards = [] } = useCards() || {};
 
-    // Auto-advance logic (sync with cards if loaded later)
+    // When cards load, recalculate the financial month and update if needed
     useEffect(() => {
         if (cards && Array.isArray(cards) && cards.length > 0) {
-            const today = new Date();
-            const currentDay = today.getDate();
+            // Use the card with the latest closing day to determine financial month
             const latestClosingDay = cards.reduce((max, card) => Math.max(max, card.closing_day || 1), 1);
-
             localStorage.setItem('latest_closing_day', latestClosingDay.toString());
+
+            // Only auto-set on first load (don't override user navigation)
+            if (!hasInitialized.current) {
+                hasInitialized.current = true;
+                const financialDate = getFinancialMonth(latestClosingDay);
+                setSelectedDate(prev => {
+                    // Only update if the month actually differs from what we cached
+                    if (prev.getMonth() !== financialDate.getMonth() || prev.getFullYear() !== financialDate.getFullYear()) {
+                        return financialDate;
+                    }
+                    return prev;
+                });
+            }
         }
     }, [cards]);
 
@@ -64,7 +87,8 @@ export function DashboardProvider({ children }) {
     };
 
     const handleSetToday = () => {
-        setSelectedDate(getSmartInitialDate());
+        const cachedClosingDay = parseInt(localStorage.getItem('latest_closing_day') || '0');
+        setSelectedDate(getFinancialMonth(cachedClosingDay));
     };
 
     // Modal Actions
@@ -98,3 +122,4 @@ export function useDashboard() {
     const context = useContext(DashboardContext);
     return context || {};
 }
+

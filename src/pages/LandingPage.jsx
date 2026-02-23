@@ -764,7 +764,13 @@ const Footer = () => (
 
 export default function LandingPage() {
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const { user, loading } = useAuth();
+
+    useEffect(() => {
+        if (!loading && user) {
+            navigate('/dashboard', { replace: true });
+        }
+    }, [user, loading, navigate]);
 
     useEffect(() => {
         document.title = "DinDin - Pare de se perder no cartão e na divisão de gastos";

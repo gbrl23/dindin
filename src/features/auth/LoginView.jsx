@@ -1,11 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { LogIn, ArrowRight } from 'lucide-react';
 
 export default function LoginView() {
-    const { signIn, signInWithGoogle } = useAuth();
+    const { signIn, signInWithGoogle, user, loading: authLoading } = useAuth();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [email, setEmail] = useState('');
@@ -14,6 +14,12 @@ export default function LoginView() {
     const [rememberMe, setRememberMe] = useState(() => {
         return localStorage.getItem('dindin_remember_me') !== 'false';
     });
+
+    useEffect(() => {
+        if (!authLoading && user) {
+            navigate('/dashboard', { replace: true });
+        }
+    }, [user, authLoading, navigate]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();

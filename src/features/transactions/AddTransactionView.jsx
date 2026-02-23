@@ -93,7 +93,13 @@ export default function AddTransactionView() {
     return (
         <div className="container" style={{ paddingBottom: '120px', maxWidth: '600px', margin: '0 auto', padding: isMobile ? '0 16px' : '20px' }}>
             {/* Header Premium */}
-            <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px', marginTop: '16px' }}>
+            <header style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '32px',
+                marginTop: isMobile ? 'calc(16px + env(safe-area-inset-top, 0px))' : '16px'
+            }}>
                 <button onClick={() => navigate(-1)} style={{ width: 44, height: 44, borderRadius: '14px', background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-primary)', border: '1px solid var(--border)', cursor: 'pointer', transition: '0.2s' }}>
                     <ArrowLeft size={22} />
                 </button>

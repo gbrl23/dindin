@@ -32,7 +32,7 @@ const FadeIn = ({ children, delay = 0, className = "", viewport = true }) => (
 );
 
 const Navbar = ({ onLoginClick, onRegisterClick }) => (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-bg-warm/80 backdrop-blur-md border-b border-black/5">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-bg-warm/80 backdrop-blur-md border-b border-black/5" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
             <div className="flex items-center gap-2 text-brand-purple">
                 <Coins size={32} />
@@ -154,7 +154,7 @@ const Hero = ({ onRegisterClick }) => (
             style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
 
         <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
-            <div className="max-w-2xl">
+            <div className="max-w-2xl text-center lg:text-left mx-auto lg:mx-0">
                 <FadeIn viewport={false}>
                     <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-lavender text-brand-purple text-sm font-medium mb-6">
                         <span className="w-2 h-2 rounded-full bg-brand-purple animate-pulse" />
@@ -167,20 +167,20 @@ const Hero = ({ onRegisterClick }) => (
                     </h1>
                 </FadeIn>
                 <FadeIn delay={0.2} viewport={false}>
-                    <p className="text-lg md:text-xl text-gray-600 mb-8 leading-relaxed max-w-xl">
+                    <p className="text-lg md:text-xl text-gray-600 mb-8 leading-relaxed max-w-xl mx-auto lg:mx-0">
                         Você não precisa mais descobrir o problema só quando a fatura chega. E muito menos fazer conta manual para dividir despesas. O Dindin organiza seu dinheiro, seu cartão e suas divisões — tudo em um só lugar.
                     </p>
                 </FadeIn>
                 <FadeIn delay={0.3} viewport={false}>
-                    <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="flex flex-col sm:flex-row items-center lg:items-start justify-center lg:justify-start gap-4">
                         <button
                             onClick={onRegisterClick}
-                            className="bg-brand-purple hover:bg-brand-deep text-white px-8 py-4 rounded-full font-medium text-lg transition-colors shadow-lg shadow-brand-purple/20 flex items-center justify-center gap-2 group"
+                            className="bg-brand-purple hover:bg-brand-deep text-white px-8 py-4 rounded-full font-medium text-lg transition-colors shadow-lg shadow-brand-purple/20 flex items-center justify-center gap-2 group w-full sm:w-auto"
                         >
                             Começar teste grátis de 7 dias
                             <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
                         </button>
-                        <p className="text-sm text-gray-500 text-center sm:text-left sm:self-center">
+                        <p className="text-sm text-gray-500 text-center lg:text-left sm:self-center">
                             Sem risco. Cancele quando quiser.
                         </p>
                     </div>

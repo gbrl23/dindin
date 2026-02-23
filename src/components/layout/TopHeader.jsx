@@ -57,7 +57,8 @@ export default function TopHeader({ onOpenNewTransaction }) {
             zIndex: 40,
             background: 'var(--bg-primary)', // Adapted to theme
             // backdropFilter: 'blur(10px)', // Disabled for now as we don't have alpha var yet
-            padding: '24px 0', // Vertical padding
+            paddingTop: 'calc(24px + env(safe-area-inset-top, 0px))',
+            paddingBottom: '24px',
             margin: '0 -40px', // Negative margin to stretch full width of container padding
             paddingLeft: '40px', // compensate
             paddingRight: '40px', // compensate

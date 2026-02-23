@@ -78,6 +78,7 @@ export default function MainLayout({ children }) {
                             alignItems: 'center',
                             gap: '12px',
                             marginBottom: '16px',
+                            paddingTop: 'env(safe-area-inset-top, 0px)',
                             paddingBottom: '16px',
                             borderBottom: '1px solid var(--border)',
                             justifyContent: 'space-between'

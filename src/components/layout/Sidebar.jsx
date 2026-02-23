@@ -168,11 +168,11 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
 
                 {/* Header / Logo Area */}
                 <div style={{
-                    height: '80px',
+                    height: isMobile ? 'calc(80px + env(safe-area-inset-top, 0px))' : '80px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: (isCollapsed && !isMobile) ? 'center' : 'flex-start',
-                    padding: (isCollapsed && !isMobile) ? '0' : '0 24px',
+                    padding: (isCollapsed && !isMobile) ? '0' : (isMobile ? 'calc(env(safe-area-inset-top, 0px)) 24px 0 24px' : '0 24px'),
                     marginBottom: '8px'
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

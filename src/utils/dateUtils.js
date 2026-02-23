@@ -57,7 +57,15 @@ export const displayDateShort = (dateStr) => {
 
 /**
  * Calculate the invoice month for a card transaction based on closing day.
- * If the purchase day >= closing_day, the transaction falls into the NEXT month's invoice.
+ * Brazilian credit card logic:
+ * - Purchases BEFORE the closing day → go into the invoice that CLOSES this month, DUE next month
+ * - Purchases ON or AFTER the closing day → go into the invoice that CLOSES next month, DUE the month after
+ * 
+ * The returned date represents the PAYMENT month (when the bill is due).
+ *
+ * Example: Card closes day 28, due day 5
+ * - Purchase on Feb 23 (before 28) → closes Feb 28 → due Mar 5 → returns 2026-03-01
+ * - Purchase on Feb 28 (on closing) → closes Mar 28 → due Apr 5 → returns 2026-04-01
  *
  * @param {string} transactionDate - Transaction date in YYYY-MM-DD format
  * @param {number} closingDay - Card closing day (1-31)
@@ -69,15 +77,17 @@ export const getInvoiceMonth = (transactionDate, closingDay) => {
     const [txYear, txMonth, txDay] = transactionDate.split('-').map(Number);
     if (!txYear || !txMonth || !txDay) return null;
 
-    let invMonth = txMonth;
+    let invMonth = txMonth + 1; // Base: next month (invoice closes this month, due next)
     let invYear = txYear;
 
     if (txDay >= closingDay) {
-        invMonth++;
-        if (invMonth > 12) {
-            invMonth = 1;
-            invYear++;
-        }
+        invMonth++; // Missed this month's closing, goes to next cycle
+    }
+
+    // Handle year overflow
+    while (invMonth > 12) {
+        invMonth -= 12;
+        invYear++;
     }
 
     const pad = (n) => String(n).padStart(2, '0');

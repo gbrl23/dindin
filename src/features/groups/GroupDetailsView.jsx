@@ -95,8 +95,11 @@ export default function GroupDetailsView() {
 
     useEffect(() => {
         if (groupId) {
+            // Format selected month as YYYY-MM for the balance query
+            const monthStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
+
             setIsLoadingBalances(true);
-            getGroupBalances(groupId)
+            getGroupBalances(groupId, monthStr)
                 .then(data => setBalances(data))
                 .catch(err => console.error("Failed to load balances", err))
                 .finally(() => setIsLoadingBalances(false));

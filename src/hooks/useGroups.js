@@ -194,11 +194,11 @@ export function useGroups() {
     };
 
     // Calculate Balances helper (wrapper for RPC)
-    const getGroupBalances = async (groupId) => {
+    const getGroupBalances = async (groupId, month = null) => {
         try {
-            const { data, error } = await supabase.rpc('get_group_balances', {
-                p_group_id: groupId
-            });
+            const params = { p_group_id: groupId };
+            if (month) params.p_month = month;
+            const { data, error } = await supabase.rpc('get_group_balances', params);
             if (error) throw error;
             return data;
         } catch (err) {

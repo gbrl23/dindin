@@ -29,6 +29,8 @@ export default function AccountView() {
     const [avatarUrl, setAvatarUrl] = useState(null);
     const [financialStartDay, setFinancialStartDay] = useState(1);
     const [salary, setSalary] = useState('');
+    const [salaryType, setSalaryType] = useState('full');
+    const [salaryParts, setSalaryParts] = useState([{ day: 5, amount: '' }]);
     const [uploadingAvatar, setUploadingAvatar] = useState(false);
     const fileInputRef = useRef(null);
 
@@ -40,7 +42,7 @@ export default function AccountView() {
         const fetchProfile = async () => {
             const { data } = await supabase
                 .from('profiles')
-                .select('avatar_url, financial_start_day, monthly_income, phone, birth_date, bio')
+                .select('avatar_url, financial_start_day, monthly_income, phone, birth_date, bio, salary_type, salary_parts')
                 .eq('user_id', user.id)
                 .single();
             if (data) {
@@ -50,6 +52,13 @@ export default function AccountView() {
                 if (data.phone) setProfilePhone(data.phone);
                 if (data.birth_date) setProfileBirthDate(data.birth_date);
                 if (data.bio) setProfileBio(data.bio);
+                if (data.salary_type) setSalaryType(data.salary_type);
+                if (data.salary_parts && data.salary_parts.length > 0) {
+                    setSalaryParts(data.salary_parts.map(p => ({
+                        day: p.day,
+                        amount: p.amount ? p.amount.toString().replace('.', ',') : ''
+                    })));
+                }
             }
         };
         if (user?.id) {
@@ -125,14 +134,10 @@ export default function AccountView() {
         e.preventDefault();
         setIsLoading(true);
         try {
-            const numericSalary = salary ? parseFloat(salary.replace(/\./g, '').replace(',', '.')) : 0;
-
             const { error } = await supabase
                 .from('profiles')
                 .update({
                     financial_start_day: financialStartDay,
-                    monthly_income: numericSalary,
-                    salary: numericSalary
                 })
                 .eq('user_id', user.id);
 
@@ -142,6 +147,47 @@ export default function AccountView() {
         } catch (error) {
             console.error(error);
             alert('Erro ao salvar configurações.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleUpdateSalary = async (e) => {
+        e.preventDefault();
+        setIsLoading(true);
+        try {
+            // Build salary_parts with numeric amounts
+            const parts = salaryParts.map(p => ({
+                day: parseInt(p.day) || 1,
+                amount: p.amount ? parseFloat(String(p.amount).replace(/\./g, '').replace(',', '.')) : 0
+            })).filter(p => p.amount > 0);
+
+            // Total = sum of all parts, or the single salary field for 'full' type
+            let totalIncome;
+            if (salaryType === 'full') {
+                totalIncome = salary ? parseFloat(salary.replace(/\./g, '').replace(',', '.')) : 0;
+            } else {
+                totalIncome = parts.reduce((sum, p) => sum + p.amount, 0);
+            }
+
+            const { error } = await supabase
+                .from('profiles')
+                .update({
+                    salary_type: salaryType,
+                    salary_parts: salaryType === 'full'
+                        ? [{ day: parseInt(salaryParts[0]?.day) || 1, amount: totalIncome }]
+                        : parts,
+                    monthly_income: totalIncome,
+                    salary: totalIncome
+                })
+                .eq('user_id', user.id);
+
+            if (error) throw error;
+            alert('Configuração de renda salva!');
+            setActiveSection(null);
+        } catch (error) {
+            console.error(error);
+            alert('Erro ao salvar configuração de renda.');
         } finally {
             setIsLoading(false);
         }
@@ -435,29 +481,206 @@ export default function AccountView() {
 
                     {/* Expand: Salary Form */}
                     {activeSection === 'salary' && (
-                        <form onSubmit={handleUpdateConfig} style={{
+                        <form onSubmit={handleUpdateSalary} style={{
                             padding: '20px',
                             background: 'var(--bg-secondary)',
                             borderBottom: '1px solid var(--border)'
                         }}>
-                            <div style={{ marginBottom: '16px' }}>
-                                <label style={{ display: 'block', color: 'var(--text-secondary)', marginBottom: '8px', fontSize: '0.9rem' }}>
-                                    Renda Mensal (R$)
+                            {/* Salary Type Selector */}
+                            <div style={{ marginBottom: '20px' }}>
+                                <label style={{ display: 'block', color: 'var(--text-secondary)', marginBottom: '10px', fontSize: '0.9rem' }}>
+                                    Como você recebe?
                                 </label>
-                                <input
-                                    type="text"
-                                    className="input"
-                                    placeholder="0,00"
-                                    value={salary}
-                                    onChange={e => {
-                                        const val = e.target.value.replace(/[^0-9.,]/g, '');
-                                        setSalary(val);
-                                    }}
-                                />
-                                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '8px' }}>
-                                    Este valor será usado como seu saldo inicial do mês.
-                                </p>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    {[
+                                        { value: 'full', label: 'Inteiro' },
+                                        { value: 'biweekly', label: '15 em 15' },
+                                        { value: 'custom', label: 'Personalizado' }
+                                    ].map(opt => (
+                                        <button
+                                            key={opt.value}
+                                            type="button"
+                                            onClick={() => {
+                                                setSalaryType(opt.value);
+                                                if (opt.value === 'full') {
+                                                    setSalaryParts([{ day: salaryParts[0]?.day || 5, amount: salary }]);
+                                                } else if (opt.value === 'biweekly') {
+                                                    setSalaryParts([
+                                                        { day: salaryParts[0]?.day || 5, amount: salaryParts[0]?.amount || '' },
+                                                        { day: salaryParts[1]?.day || 20, amount: salaryParts[1]?.amount || '' }
+                                                    ]);
+                                                } else {
+                                                    if (salaryParts.length < 2) {
+                                                        setSalaryParts([...salaryParts, { day: 20, amount: '' }]);
+                                                    }
+                                                }
+                                            }}
+                                            style={{
+                                                flex: 1,
+                                                padding: '10px 12px',
+                                                borderRadius: '10px',
+                                                border: salaryType === opt.value ? '2px solid var(--primary)' : '1px solid var(--border)',
+                                                background: salaryType === opt.value ? 'rgba(99, 102, 241, 0.1)' : 'var(--bg-card)',
+                                                color: salaryType === opt.value ? 'var(--primary)' : 'var(--text-secondary)',
+                                                fontWeight: salaryType === opt.value ? '600' : '400',
+                                                fontSize: '0.85rem',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s'
+                                            }}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
+
+                            {/* Full: Single salary input */}
+                            {salaryType === 'full' && (
+                                <div style={{ marginBottom: '16px' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr', gap: '12px' }}>
+                                        <div>
+                                            <label style={{ display: 'block', color: 'var(--text-secondary)', marginBottom: '8px', fontSize: '0.85rem' }}>
+                                                Dia
+                                            </label>
+                                            <input
+                                                type="number" min="1" max="31"
+                                                className="input"
+                                                inputMode="numeric"
+                                                value={salaryParts[0]?.day || ''}
+                                                onChange={e => setSalaryParts([{ ...salaryParts[0], day: e.target.value }])}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label style={{ display: 'block', color: 'var(--text-secondary)', marginBottom: '8px', fontSize: '0.85rem' }}>
+                                                Valor (R$)
+                                            </label>
+                                            <input
+                                                type="text"
+                                                className="input"
+                                                inputMode="decimal"
+                                                placeholder="0,00"
+                                                value={salary}
+                                                onChange={e => setSalary(e.target.value.replace(/[^0-9.,]/g, ''))}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Biweekly / Custom: Multiple parts */}
+                            {(salaryType === 'biweekly' || salaryType === 'custom') && (
+                                <div style={{ marginBottom: '16px' }}>
+                                    {salaryParts.map((part, i) => (
+                                        <div key={i} style={{
+                                            display: 'grid',
+                                            gridTemplateColumns: salaryType === 'custom' ? '100px 1fr 40px' : '100px 1fr',
+                                            gap: '12px',
+                                            marginBottom: '12px',
+                                            alignItems: 'end'
+                                        }}>
+                                            <div>
+                                                <label style={{ display: 'block', color: 'var(--text-secondary)', marginBottom: '8px', fontSize: '0.85rem' }}>
+                                                    {i === 0 ? 'Dia' : `Dia ${i + 1}`}
+                                                </label>
+                                                <input
+                                                    type="number" min="1" max="31"
+                                                    className="input"
+                                                    inputMode="numeric"
+                                                    value={part.day}
+                                                    onChange={e => {
+                                                        const updated = [...salaryParts];
+                                                        updated[i] = { ...updated[i], day: e.target.value };
+                                                        setSalaryParts(updated);
+                                                    }}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', color: 'var(--text-secondary)', marginBottom: '8px', fontSize: '0.85rem' }}>
+                                                    Valor (R$)
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    className="input"
+                                                    inputMode="decimal"
+                                                    placeholder="0,00"
+                                                    value={part.amount}
+                                                    onChange={e => {
+                                                        const updated = [...salaryParts];
+                                                        updated[i] = { ...updated[i], amount: e.target.value.replace(/[^0-9.,]/g, '') };
+                                                        setSalaryParts(updated);
+                                                    }}
+                                                />
+                                            </div>
+                                            {salaryType === 'custom' && salaryParts.length > 1 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSalaryParts(salaryParts.filter((_, idx) => idx !== i))}
+                                                    style={{
+                                                        background: 'rgba(239, 68, 68, 0.1)',
+                                                        border: 'none',
+                                                        borderRadius: '10px',
+                                                        padding: '12px',
+                                                        color: 'var(--danger)',
+                                                        cursor: 'pointer',
+                                                        height: '44px'
+                                                    }}
+                                                    title="Remover"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            )}
+                                        </div>
+                                    ))}
+
+                                    {/* Add Part Button (custom only) */}
+                                    {salaryType === 'custom' && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setSalaryParts([...salaryParts, { day: '', amount: '' }])}
+                                            style={{
+                                                width: '100%',
+                                                padding: '10px',
+                                                borderRadius: '10px',
+                                                border: '1px dashed var(--border)',
+                                                background: 'transparent',
+                                                color: 'var(--text-secondary)',
+                                                fontSize: '0.85rem',
+                                                cursor: 'pointer',
+                                                marginBottom: '12px'
+                                            }}
+                                        >
+                                            + Adicionar parcela
+                                        </button>
+                                    )}
+
+                                    {/* Total Display */}
+                                    {(() => {
+                                        const total = salaryParts.reduce((sum, p) => {
+                                            const val = p.amount ? parseFloat(String(p.amount).replace(/\./g, '').replace(',', '.')) : 0;
+                                            return sum + (isNaN(val) ? 0 : val);
+                                        }, 0);
+                                        return (
+                                            <div style={{
+                                                padding: '12px 16px',
+                                                borderRadius: '10px',
+                                                background: 'rgba(16, 185, 129, 0.08)',
+                                                border: '1px solid rgba(16, 185, 129, 0.2)',
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center'
+                                            }}>
+                                                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                                                    Total mensal
+                                                </span>
+                                                <span style={{ fontSize: '1.1rem', fontWeight: '700', color: 'var(--success)' }}>
+                                                    R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                </span>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+                            )}
+
                             <button
                                 type="submit"
                                 className="btn btn-primary"

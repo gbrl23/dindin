@@ -32,7 +32,7 @@ export default function TransactionsListView() {
         handleNextMonth: nextMonth
     } = useDashboard();
     const { user } = useAuth();
-    const { profiles } = useProfiles();
+    const { profiles, myProfile } = useProfiles();
     const { categories } = useCategories();
 
     // State
@@ -591,7 +591,11 @@ export default function TransactionsListView() {
                                             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                 {t.card && (
                                                     <>
-                                                        <CreditCard size={12} /> {t.card.name}
+                                                        <CreditCard size={12} />
+                                                        {t.card.name}
+                                                        {t.payer && myProfile && t.payer.id !== myProfile.id && (
+                                                            <span> ({t.payer.full_name?.split(' ')[0]})</span>
+                                                        )}
                                                     </>
                                                 )}
                                                 {t.series_id && (

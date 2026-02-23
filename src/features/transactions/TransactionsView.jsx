@@ -119,7 +119,7 @@ export default function TransactionsView() {
     const { transactions, fetchTransactions, removeTransaction, removeTransactionSeries } = useTransactions();
     const { cards } = useCards();
     const { categories } = useCategories();
-    const { profiles } = useProfiles();
+    const { profiles, myProfile } = useProfiles();
 
     // UI State
     const [searchTerm, setSearchTerm] = useState('');
@@ -875,28 +875,42 @@ export default function TransactionsView() {
                                                 )}
                                             </td>
                                             <td style={{ padding: '16px', color: 'var(--text-secondary)' }}>
-                                                {t.card?.name || (t.type === 'expense' ? 'Dinheiro' : '-')}
+                                                {(() => {
+                                                    if (t.type !== 'expense') return '-';
+                                                    const cardName = t.card?.name;
+                                                    const payerName = t.payer?.full_name;
+                                                    const isMyTransaction = t.payer?.id === myProfile?.id;
+                                                    if (cardName) {
+                                                        return isMyTransaction ? cardName : `${cardName} (${payerName?.split(' ')[0] || 'Outro'})`;
+                                                    }
+                                                    return isMyTransaction ? 'Dinheiro' : `Conta (${payerName?.split(' ')[0] || 'Outro'})`;
+                                                })()}
                                             </td>
                                             <td style={{ padding: '16px' }}>
                                                 {(() => {
                                                     if (!t.shares || t.shares.length <= 1) return <span style={{ color: 'var(--text-tertiary)' }}>-</span>;
 
-                                                    // Filter out current user from display if desired, or show all. 
-                                                    // Usually "Split with" implies others.
-                                                    const others = t.shares.filter(s => s.profile_id !== user?.id);
-
-                                                    if (others.length === 0) return <span style={{ color: 'var(--text-tertiary)' }}>-</span>;
+                                                    // Sort: payer first, then others
+                                                    const sorted = [...t.shares].sort((a, b) => {
+                                                        const aIsPayer = a.profile_id === t.payer_id;
+                                                        const bIsPayer = b.profile_id === t.payer_id;
+                                                        if (aIsPayer && !bIsPayer) return -1;
+                                                        if (!aIsPayer && bIsPayer) return 1;
+                                                        return 0;
+                                                    });
 
                                                     return (
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                            {others.slice(0, 3).map(share => {
-                                                                const p = profiles.find(pr => pr.id === share.profile_id);
+                                                            {sorted.slice(0, 4).map(share => {
+                                                                const p = share.profile || profiles.find(pr => pr.id === share.profile_id);
+                                                                const isPayer = share.profile_id === t.payer_id;
                                                                 return (
-                                                                    <div key={share.id} title={p?.full_name || 'Usuário'} style={{
+                                                                    <div key={share.profile_id} title={`${p?.full_name || 'Usuário'}${isPayer ? ' (pagou)' : ''}`} style={{
                                                                         width: 24, height: 24, borderRadius: '50%',
-                                                                        background: 'var(--primary)', color: '#fff',
+                                                                        background: isPayer ? 'var(--success)' : 'var(--primary)', color: '#fff',
                                                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                                        fontSize: '0.7rem', fontWeight: 'bold', border: '1px solid #fff'
+                                                                        fontSize: '0.7rem', fontWeight: 'bold',
+                                                                        border: isPayer ? '2px solid var(--success)' : '1px solid #fff'
                                                                     }}>
                                                                         {p?.avatar_url ? (
                                                                             <img src={p.avatar_url} alt={p.full_name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
@@ -906,8 +920,8 @@ export default function TransactionsView() {
                                                                     </div>
                                                                 );
                                                             })}
-                                                            {others.length > 3 && (
-                                                                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginLeft: '4px' }}>+{others.length - 3}</span>
+                                                            {sorted.length > 4 && (
+                                                                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginLeft: '4px' }}>+{sorted.length - 4}</span>
                                                             )}
                                                         </div>
                                                     );

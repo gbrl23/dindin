@@ -552,7 +552,15 @@ export default function DashboardView() {
                                                         {displayDate(t.date, { day: '2-digit', month: 'short' })}
                                                     </td>
                                                     <td style={{ padding: '16px 16px', fontWeight: '600', color: 'var(--text-primary)' }}>{t.description}</td>
-                                                    <td style={{ padding: '16px 16px', color: 'var(--text-secondary)' }}>{t.card?.name || 'Conta'}</td>
+                                                    <td style={{ padding: '16px 16px', color: 'var(--text-secondary)' }}>
+                                                        {(() => {
+                                                            const cardName = t.card?.name;
+                                                            const payerName = t.payer?.full_name;
+                                                            const isMyTx = t.payer?.id === myProfile?.id;
+                                                            if (cardName) return isMyTx ? cardName : `${cardName} (${payerName?.split(' ')[0] || 'Outro'})`;
+                                                            return isMyTx ? 'Conta' : `Conta (${payerName?.split(' ')[0] || 'Outro'})`;
+                                                        })()}
+                                                    </td>
                                                     <td style={{ padding: '16px 32px', textAlign: 'right', fontWeight: '700', color: t.type === 'income' ? 'var(--success)' : 'var(--text-primary)' }}>
                                                         {t.type === 'income' ? '+' : '-'} R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                                     </td>

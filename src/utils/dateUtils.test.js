@@ -61,8 +61,8 @@ describe('dateUtils', () => {
                 expect(getInvoiceMonth('2026-02-05', C)).toBe('2026-02');
             });
 
-            it('Compra dia 10/Fev (NO dia do fechamento) → Fevereiro', () => {
-                expect(getInvoiceMonth('2026-02-10', C)).toBe('2026-02');
+            it('Compra dia 10/Fev (NO dia do fechamento) → Março', () => {
+                expect(getInvoiceMonth('2026-02-10', C)).toBe('2026-03');
             });
 
             it('Compra dia 11/Fev (um dia DEPOIS do fechamento) → Março', () => {
@@ -106,8 +106,8 @@ describe('dateUtils', () => {
                 expect(getInvoiceMonth('2026-02-23', C)).toBe('2026-02');
             });
 
-            it('Compra dia 28/Fev (NO dia do fechamento) → Fevereiro', () => {
-                expect(getInvoiceMonth('2026-02-28', C)).toBe('2026-02');
+            it('Compra dia 28/Fev (NO dia do fechamento) → Março', () => {
+                expect(getInvoiceMonth('2026-02-28', C)).toBe('2026-03');
             });
 
             it('Compra dia 29/Jan (depois do fechamento) → Fevereiro', () => {
@@ -135,8 +135,8 @@ describe('dateUtils', () => {
                 expect(getInvoiceMonth('2026-03-01', C)).toBe('2026-03');
             });
 
-            it('Compra dia 02/Mar (NO dia do fechamento) → Março', () => {
-                expect(getInvoiceMonth('2026-03-02', C)).toBe('2026-03');
+            it('Compra dia 02/Mar (NO dia do fechamento) → Abril', () => {
+                expect(getInvoiceMonth('2026-03-02', C)).toBe('2026-04');
             });
 
             it('Compra dia 03/Mar (depois do fechamento) → Abril', () => {

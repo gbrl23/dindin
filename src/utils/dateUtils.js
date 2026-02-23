@@ -89,11 +89,11 @@ export const getInvoiceMonth = (dateStr, closingDay) => {
 
     let invoiceMonth;
 
-    if (day <= closingDay) {
-        // Purchase is within the current billing cycle → same month
+    if (day < closingDay) {
+        // Purchase BEFORE closing day → current month's invoice
         invoiceMonth = new Date(year, month, 1);
     } else {
-        // Purchase is after closing → falls into next month's cycle
+        // Purchase ON or AFTER closing day → next month's invoice
         invoiceMonth = new Date(year, month + 1, 1);
     }
 

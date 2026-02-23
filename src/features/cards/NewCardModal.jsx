@@ -141,9 +141,11 @@ export default function NewCardModal({ onClose, onSuccess, initialData = null })
                 background: isMobile ? 'var(--bg-primary)' : 'rgba(0,0,0,0.5)',
                 backdropFilter: isMobile ? 'none' : 'blur(12px)',
                 display: 'flex',
-                alignItems: isMobile ? 'stretch' : 'center',
-                justifyContent: isMobile ? 'stretch' : 'center',
-                cursor: isMobile ? 'default' : 'pointer'
+                alignItems: isMobile ? 'flex-start' : 'center',
+                justifyContent: 'center',
+                cursor: isMobile ? 'default' : 'pointer',
+                overflowY: isMobile ? 'auto' : 'hidden',
+                WebkitOverflowScrolling: 'touch'
             }}
         >
             <div
@@ -151,10 +153,12 @@ export default function NewCardModal({ onClose, onSuccess, initialData = null })
                 style={{
                     padding: isMobile ? '0' : '40px',
                     display: 'flex',
+                    flexDirection: 'column',
                     alignItems: isMobile ? 'stretch' : 'center',
-                    justifyContent: isMobile ? 'stretch' : 'center',
+                    justifyContent: isMobile ? 'flex-start' : 'center',
                     width: '100%',
                     maxWidth: isMobile ? '100%' : '520px',
+                    minHeight: isMobile ? '100%' : 'auto',
                     cursor: 'default'
                 }}
             >
@@ -162,10 +166,11 @@ export default function NewCardModal({ onClose, onSuccess, initialData = null })
                     width: isMobile ? '100%' : '440px',
                     padding: isMobile ? '16px' : '32px',
                     paddingTop: isMobile ? '0' : '32px',
+                    paddingBottom: isMobile ? '40px' : '32px',
                     position: 'relative',
-                    minHeight: isMobile ? '100vh' : 'auto',
+                    minHeight: isMobile ? 'auto' : 'auto',
                     maxHeight: isMobile ? 'none' : '90vh',
-                    overflowY: 'auto',
+                    overflowY: isMobile ? 'visible' : 'auto',
                     scrollbarGutter: 'stable',
                     background: isMobile ? 'var(--bg-primary)' : '#FFF',
                     borderRadius: isMobile ? '0' : '24px',
@@ -301,7 +306,7 @@ export default function NewCardModal({ onClose, onSuccess, initialData = null })
                                     placeholder="Ex: Nubank, Cartão Black..."
                                     maxLength={50}
                                     style={inputStyle}
-                                    autoFocus
+                                    autoFocus={!isMobile}
                                 />
                             </div>
                             {errors.name && touched.name && (
@@ -341,11 +346,13 @@ export default function NewCardModal({ onClose, onSuccess, initialData = null })
                                     ...(errors.closingDay && touched.closingDay ? errorContainerStyle : {})
                                 }}>
                                     <input
-                                        type="number" min="1" max="31"
+                                        type="text" inputMode="numeric" pattern="[0-9]*"
+                                        min="1" max="31"
                                         value={formData.closingDay}
-                                        onChange={e => handleChange('closingDay', e.target.value)}
+                                        onChange={e => handleChange('closingDay', e.target.value.replace(/[^0-9]/g, ''))}
                                         onBlur={() => handleBlur('closingDay')}
                                         placeholder="Ex: 05"
+                                        maxLength={2}
                                         style={{ ...inputStyle, textAlign: 'center' }}
                                     />
                                 </div>
@@ -363,11 +370,13 @@ export default function NewCardModal({ onClose, onSuccess, initialData = null })
                                     ...(errors.dueDay && touched.dueDay ? errorContainerStyle : {})
                                 }}>
                                     <input
-                                        type="number" min="1" max="31"
+                                        type="text" inputMode="numeric" pattern="[0-9]*"
+                                        min="1" max="31"
                                         value={formData.dueDay}
-                                        onChange={e => handleChange('dueDay', e.target.value)}
+                                        onChange={e => handleChange('dueDay', e.target.value.replace(/[^0-9]/g, ''))}
                                         onBlur={() => handleBlur('dueDay')}
                                         placeholder="Ex: 12"
+                                        maxLength={2}
                                         style={{ ...inputStyle, textAlign: 'center' }}
                                     />
                                 </div>
@@ -385,7 +394,7 @@ export default function NewCardModal({ onClose, onSuccess, initialData = null })
                             </div>
                             <div style={inputContainerStyle}>
                                 <input
-                                    type="text" maxLength="4"
+                                    type="text" inputMode="numeric" pattern="[0-9]*" maxLength="4"
                                     value={formData.last4} onChange={e => setFormData({ ...formData, last4: e.target.value.replace(/[^0-9]/g, '') })}
                                     placeholder="••••"
                                     style={{ ...inputStyle, letterSpacing: '4px', textAlign: 'center', fontWeight: '700' }}

@@ -22,6 +22,7 @@ import SubscriptionsView from './features/subscriptions/SubscriptionsView';
 import BudgetsView from './features/budgets/BudgetsView';
 import ReportsView from './features/reports/ReportsView';
 import ImportCsvView from './features/import/ImportCsvView';
+import OnboardingView from './features/onboarding/OnboardingView';
 
 import MainLayout from './components/layout/MainLayout';
 
@@ -35,6 +36,9 @@ function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginView />} />
             <Route path="/signup" element={<SignUpView />} />
+
+            {/* Onboarding - Protected but NO MainLayout */}
+            <Route path="/onboarding" element={<ProtectedRoute><OnboardingView /></ProtectedRoute>} />
 
             {/* Protected Routes - Wrapped in MainLayout */}
             <Route path="/dashboard" element={<ProtectedRoute><MainLayout><DashboardView /></MainLayout></ProtectedRoute>} />

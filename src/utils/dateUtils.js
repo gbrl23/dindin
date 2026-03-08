@@ -95,6 +95,5 @@ export const getInvoiceMonth = (dateStr, closingDay, dueDay) => {
     const paymentOffset = (dueDay && dueDay < closingDay) ? 1 : 0;
 
     const invoiceMonth = new Date(year, cycleCloseMonth + paymentOffset, 1);
-
-    return format(invoiceMonth, 'yyyy-MM');
+    return format(invoiceMonth, 'yyyy-MM-01');
 };

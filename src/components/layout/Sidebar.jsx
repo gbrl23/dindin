@@ -101,15 +101,16 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
                 className={isMobile ? '' : 'hide-mobile'}
                 style={{
                     width: isMobile ? '280px' : (isCollapsed ? '80px' : '260px'),
-                    height: isMobile ? '100dvh' : '100vh',
-                    position: 'fixed',
-                    left: isMobile ? (mobileOpen ? '0' : '-300px') : 0,
-                    top: 0,
-                    background: 'var(--bg-card)',
-                    borderRight: '1px solid var(--border)',
+                    minWidth: isMobile ? '280px' : (isCollapsed ? '80px' : '260px'),
+                    height: isMobile ? '100dvh' : 'calc(100vh - 32px)',
+                    position: isMobile ? 'fixed' : 'relative',
+                    left: isMobile ? (mobileOpen ? '0' : '-300px') : 'auto',
+                    top: isMobile ? 0 : 'auto',
+                    background: isMobile ? 'var(--bg-card)' : 'transparent',
+                    borderRight: isMobile ? '1px solid var(--border)' : 'none',
                     display: 'flex',
                     flexDirection: 'column',
-                    transition: 'width 0.3s cubic-bezier(0.2, 0, 0, 1), left 0.3s cubic-bezier(0.2, 0, 0, 1)',
+                    transition: 'width 0.3s cubic-bezier(0.2, 0, 0, 1), min-width 0.3s cubic-bezier(0.2, 0, 0, 1), left 0.3s cubic-bezier(0.2, 0, 0, 1)',
                     zIndex: 2000,
                     boxShadow: mobileOpen ? '4px 0 20px rgba(0,0,0,0.15)' : 'none'
                 }}

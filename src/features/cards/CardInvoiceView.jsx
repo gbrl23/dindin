@@ -40,7 +40,7 @@ export default function CardInvoiceView() {
                 .from('transactions')
                 .select('id, description, amount, date, invoice_date, card_id, is_paid, category, type')
                 .eq('card_id', cardId)
-                .eq('type', 'expense')
+                .in('type', ['expense', 'bill'])
                 .eq('invoice_date', invoiceMonth)
                 .order('date', { ascending: false });
 

@@ -55,14 +55,15 @@ export default function TopHeader({ onOpenNewTransaction }) {
             position: 'sticky',
             top: 0, // Stick to very top
             zIndex: 40,
-            background: 'var(--bg-primary)', // Adapted to theme
-            // backdropFilter: 'blur(10px)', // Disabled for now as we don't have alpha var yet
-            paddingTop: 'calc(24px + env(safe-area-inset-top, 0px))',
+            background: 'var(--bg-card)',
+            paddingTop: '24px',
             paddingBottom: '24px',
             margin: '0 -40px', // Negative margin to stretch full width of container padding
             paddingLeft: '40px', // compensate
             paddingRight: '40px', // compensate
-            borderBottom: '1px solid rgba(0,0,0,0.05)'
+            borderBottom: '1px solid var(--border)',
+            borderTopLeftRadius: '24px',
+            borderTopRightRadius: '24px'
         }}>
             {/* Search Bar (Left) */}
             <div style={{

@@ -18,9 +18,18 @@ export function useTransactionForm({ onSaveSuccess, initialData = null, initialT
     const { goals } = useGoals();
     const { addTransactionsBulk, updateTransaction, updateTransactionSeries } = useTransactions();
 
+    // --- Helpers ---
+    const formatValueForState = (val) => {
+        if (val === null || val === undefined || val === '') return '';
+        if (typeof val === 'number') {
+            return val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+        return val.toString();
+    };
+
     // --- Basic State ---
     const [type, setType] = useState(initialData?.type || initialType);
-    const [amount, setAmount] = useState(initialData?.amount?.toString() || '');
+    const [amount, setAmount] = useState(formatValueForState(initialData?.amount));
     const [description, setDescription] = useState(initialData?.description || '');
     const [date, setDate] = useState(initialData?.date || getTodayLocal());
     const [selectedCategoryId, setSelectedCategoryId] = useState(initialData?.category_id || '');
@@ -72,12 +81,26 @@ export function useTransactionForm({ onSaveSuccess, initialData = null, initialT
     const pad = (n) => String(n).padStart(2, '0');
 
     const addMonthsToDate = (dateStr, monthsToAdd) => {
+        if (!dateStr || !dateStr.includes('-')) return dateStr;
         const [y, m, d] = dateStr.split('-').map(Number);
-        let newMonth = m + monthsToAdd;
-        let newYear = y;
-        while (newMonth > 12) { newMonth -= 12; newYear++; }
-        while (newMonth < 1) { newMonth += 12; newYear--; }
-        return `${newYear}-${pad(newMonth)}-${pad(d)}`;
+
+        // Use JS Date for reliable month addition
+        const date = new Date(y, m - 1 + monthsToAdd, d);
+
+        // Handle month overflow (e.g. Jan 31 + 1 month = March 3 in JS, but we want Feb 28)
+        const expectedMonth = (m - 1 + monthsToAdd) % 12;
+        const normalizedExpectedMonth = expectedMonth < 0 ? expectedMonth + 12 : expectedMonth;
+
+        if (date.getMonth() !== normalizedExpectedMonth) {
+            // We overflowed to the next month, so snap to last day of previous month
+            date.setDate(0);
+        }
+
+        const resYear = date.getFullYear();
+        const resMonth = pad(date.getMonth() + 1);
+        const resDay = pad(date.getDate());
+
+        return `${resYear}-${resMonth}-${resDay}`;
     };
 
     // --- Initialization ---
@@ -90,7 +113,22 @@ export function useTransactionForm({ onSaveSuccess, initialData = null, initialT
 
     // Initial load for editing series info
     useEffect(() => {
-        if (initialData?.series_id) {
+        if (!initialData) return;
+
+        // Sync main fields if they are different (avoiding feedback loops during typing)
+        // We only sync if these fields are not touched or if id changes
+        setType(initialData.type || initialType);
+        setAmount(formatValueForState(initialData.amount));
+        setDescription(initialData.description || '');
+        setDate(initialData.date || getTodayLocal());
+        setSelectedCategoryId(initialData.category_id || '');
+        setSelectedGoalId(initialData.goal_id || '');
+        setCardId(initialData.card_id || '');
+        setPayerId(initialData.payer_id || '');
+        setIsGroupTransaction(!!initialData.group_id);
+        setSelectedGroupId(initialData.group_id || '');
+
+        if (initialData.series_id) {
             const installmentMatch = initialData.description.match(/\((\d+)\/(\d+)\)/);
             if (installmentMatch) {
                 setIsRecurring(false);
@@ -100,7 +138,20 @@ export function useTransactionForm({ onSaveSuccess, initialData = null, initialT
                 setInstallments(1);
             }
         }
-    }, [initialData]);
+
+        // Initialize custom shares if they exist
+        if (initialData.shares && initialData.shares.length > 0) {
+            const sharesObj = {};
+            let hasCustomValue = false;
+            initialData.shares.forEach(s => {
+                const val = s.share_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                sharesObj[s.profile_id] = val;
+                // If shares are not roughly equal, it might be manual mode
+                // (This is a bit complex to detect perfectly, but we can try)
+            });
+            setCustomShares(sharesObj);
+        }
+    }, [initialData?.id, initialData?.amount, initialData?.description, initialData?.date]);
 
     // Load profiles/members
     useEffect(() => {
@@ -252,7 +303,7 @@ export function useTransactionForm({ onSaveSuccess, initialData = null, initialT
                     date: txDate,
                     invoice_date: invoiceDate,
                     payer_id: payerId,
-                    card_id: type === 'expense' ? cardId : null,
+                    card_id: (type === 'expense' || type === 'bill') ? cardId : null,
                     category: categoryName,
                     category_id: selectedCategoryId || null,
                     type,
@@ -265,8 +316,11 @@ export function useTransactionForm({ onSaveSuccess, initialData = null, initialT
             }
 
             if (initialData?.id) {
-                if (initialData.series_id && editScope === 'series') {
-                    await updateTransactionSeries(initialData.series_id, initialData.id, batch[0], 'series');
+                // Compatibility with both 'all' and 'series' scopes from SeriesActionModal
+                const isSeriesUpdate = initialData.series_id && (editScope === 'series' || editScope === 'all' || editScope === 'future');
+
+                if (isSeriesUpdate) {
+                    await updateTransactionSeries(initialData.series_id, initialData.id, batch[0], editScope === 'series' ? 'all' : editScope);
                 } else {
                     await updateTransaction(initialData.id, batch[0]);
                 }

@@ -31,7 +31,7 @@ export default function DashboardView() {
     const navigate = useNavigate();
     const { user } = useAuth();
     const isMobile = useIsMobile();
-    const { selectedDate, openTransactionModal } = useDashboard();
+    const { selectedDate } = useDashboard();
 
     const { transactions, fetchTransactions } = useTransactions();
     const { profiles, myProfile, updateProfile, loading: loadingProfiles } = useProfiles();
@@ -62,11 +62,7 @@ export default function DashboardView() {
     const selectedMonth = selectedDate.getMonth();
     const selectedYear = selectedDate.getFullYear();
 
-    // --- CALCULATIONS (Optimized with useMemo) ---
-    const { monthlyTransactions, totalIncome, balance, myExpenses, totalAReceber, totalAPagar, netBalance, burnRate } = useMemo(() => {
-        const today = new Date();
-        const isCurrentMonth = today.getMonth() === selectedMonth && today.getFullYear() === selectedYear;
-
+    const { monthlyTransactions, totalIncome } = useMemo(() => {
         const isSelectedMonth = (tx) => {
             let dateToUse = tx.date;
             if (tx.type === 'expense' && tx.card_id && tx.invoice_date) {
@@ -80,48 +76,13 @@ export default function DashboardView() {
 
         const currentMonthTxs = transactions.filter(t => isSelectedMonth(t));
 
-        const totalIncome = currentMonthTxs
+        const totalIncomeValue = currentMonthTxs
             .filter(t => t.type === 'income')
             .reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
 
-        // Calculate split balances
-        const myExpensesTotal = currentMonthTxs
-            .filter(t => t.type === 'expense' || t.type === 'investment')
-            .reduce((acc, t) => {
-                const amount = Number(t.amount) || 0;
-                if (!t.share_type || t.share_type === 'equal') {
-                    const myId = myProfile?.id;
-                    const participants = t.participants || [];
-                    if (participants.length === 0 || participants.includes(myId) || t.user_id === user?.id) {
-                        const shareCount = participants.length || 1;
-                        return acc + (amount / shareCount);
-                    }
-                }
-                return acc;
-            }, 0);
-
-        const income = parseFloat(monthlyIncome) || 0;
-        const balance = (income + totalIncome) - myExpensesTotal;
-
-        // Burn Rate logic: total expenses divided by passed days
-        let daysPassed = 1;
-        if (isCurrentMonth) {
-            daysPassed = today.getDate();
-        } else {
-            daysPassed = new Date(selectedYear, selectedMonth + 1, 0).getDate();
-        }
-        const dailyBurn = myExpensesTotal / daysPassed;
-
         return {
             monthlyTransactions: currentMonthTxs,
-            totalIncome,
-            balance,
-            myExpenses: myExpensesTotal,
-            burnRate: dailyBurn,
-            // These would come from hook, keep them for now
-            totalAReceber: 0, // Placeholder as hook is complex
-            totalAPagar: 0,
-            netBalance: 0
+            totalIncome: totalIncomeValue
         };
     }, [transactions, selectedDate, monthlyIncome, myProfile, user?.id]);
 
@@ -142,11 +103,41 @@ export default function DashboardView() {
     const finalBurnRate = finalMyExpenses / (selectedDate.getMonth() === new Date().getMonth() ? new Date().getDate() : new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).getDate());
 
     const cardInvoices = useMemo(() => cards.map(c => {
-        const cardTotal = monthlyTransactions
-            .filter(t => t.card_id === c.id && t.type === 'expense')
-            .reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
-        return { ...c, total: cardTotal };
-    }), [cards, monthlyTransactions]);
+        const cardTransactions = monthlyTransactions
+            .filter(t => t.card_id === c.id && (t.type === 'expense' || t.type === 'bill'));
+
+        const cardTotal = cardTransactions.reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
+
+        // Check if all are paid (and there's something to pay)
+        const isPaid = cardTransactions.length > 0 && cardTransactions.every(t => t.is_paid);
+
+        // Closing & Due dates for the selected month
+        const closingDate = new Date(selectedYear, selectedMonth, c.closing_day || 1);
+        const dueDate = new Date(selectedYear, selectedMonth, c.due_day || 1);
+
+        // If due_day < closing_day, it usually means due date is in the NEXT month
+        if ((c.due_day || 1) < (c.closing_day || 1)) {
+            dueDate.setMonth(dueDate.getMonth() + 1);
+        }
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // An invoice is "Closed" if today is on or after the closing day
+        // OR if we are viewing a past month.
+        const isPastMonth = selectedYear < today.getFullYear() || (selectedYear === today.getFullYear() && selectedMonth < today.getMonth());
+        const isCurrentMonth = selectedYear === today.getFullYear() && selectedMonth === today.getMonth();
+        const isClosed = isPastMonth || (isCurrentMonth && today.getDate() >= (c.closing_day || 1));
+
+        return {
+            ...c,
+            total: cardTotal,
+            isPaid,
+            isClosed,
+            closingDate,
+            dueDate
+        };
+    }), [cards, monthlyTransactions, selectedMonth, selectedYear]);
 
     // Chart Data Preparation (CUMULATIVE)
     const { incomeData, expenseData, labels } = useMemo(() => {
@@ -166,12 +157,12 @@ export default function DashboardView() {
             const dayExpenses = monthlyTransactions
                 .filter(t => t.type !== 'income')
                 .filter(t => parseLocalDate(t.date).getDate() === i)
-                .reduce((acc, t) => acc + t.amount, 0);
+                .reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
 
             const dayIncome = monthlyTransactions
                 .filter(t => t.type === 'income')
                 .filter(t => parseLocalDate(t.date).getDate() === i)
-                .reduce((acc, t) => acc + t.amount, 0);
+                .reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
 
             cumIncome += dayIncome;
             cumExpense += dayExpenses;
@@ -289,7 +280,7 @@ export default function DashboardView() {
                     </div>
 
                     {/* Divisões Card - 3 views: Balanço, A Receber, A Transferir */}
-                    {(totalAReceber > 0 || totalAPagar > 0) && (() => {
+                    {(finalTotalAReceber > 0 || finalTotalAPagar > 0) && (() => {
                         // View 0 = Balanço (NET), View 1 = A Receber, View 2 = A Transferir
                         const views = [
                             {
@@ -601,18 +592,59 @@ export default function DashboardView() {
                             ) : (
                                 cardInvoices.map(card => (
                                     <div key={card.id} className="card" style={{ padding: '20px', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '12px' }} onClick={() => {
-                                        navigate(`/card-invoice/${card.id}`);
+                                        navigate(`/card-invoice/${card.id}`, { state: { initialMonth: selectedMonth, initialYear: selectedYear } });
                                         hapticFeedback('medium');
                                     }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <CreditCard size={20} color="var(--primary)" />
-                                                <span style={{ fontWeight: '600' }}>{card.name}</span>
+                                                <div style={{ width: 32, height: 32, borderRadius: '8px', background: `${card.color || 'var(--primary)'}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: card.color || 'var(--primary)' }}>
+                                                    <CreditCard size={18} />
+                                                </div>
+                                                <span style={{ fontWeight: '700', fontSize: '1rem', color: 'var(--text-primary)' }}>{card.name}</span>
+                                            </div>
+                                            {/* Status Tag */}
+                                            <div style={{
+                                                padding: '4px 10px',
+                                                borderRadius: '20px',
+                                                fontSize: '0.65rem',
+                                                fontWeight: '800',
+                                                textTransform: 'uppercase',
+                                                letterSpacing: '0.5px',
+                                                background: card.isPaid ? 'rgba(52, 199, 89, 0.12)' : card.isClosed ? 'rgba(255, 59, 48, 0.12)' : 'rgba(0, 122, 255, 0.12)',
+                                                color: card.isPaid ? '#22C55E' : card.isClosed ? '#EF4444' : '#3B82F6',
+                                                border: `1px solid ${card.isPaid ? 'rgba(52, 199, 89, 0.2)' : card.isClosed ? 'rgba(255, 59, 48, 0.2)' : 'rgba(0, 122, 255, 0.2)'}`
+                                            }}>
+                                                {card.isPaid ? 'Paga' : card.isClosed ? 'Fechada' : 'Aberta'}
                                             </div>
                                         </div>
-                                        <div>
-                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Fatura atual</div>
-                                            <div style={{ fontSize: '1.25rem', fontWeight: '700' }}>R$ {card.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                                            <div>
+                                                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: '600', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Fatura atual</div>
+                                                <div style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>R$ {card.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            display: 'flex',
+                                            gap: '12px',
+                                            marginTop: '4px',
+                                            paddingTop: '12px',
+                                            borderTop: '1px solid var(--border-light)',
+                                            justifyContent: 'space-between'
+                                        }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                                <span style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '0.3px' }}>Fechamento</span>
+                                                <span style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                                                    {card.closingDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                                                </span>
+                                            </div>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-end' }}>
+                                                <span style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '0.3px' }}>Vencimento</span>
+                                                <span style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                                                    {card.dueDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
                                 ))

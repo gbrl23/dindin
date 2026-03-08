@@ -40,17 +40,17 @@ export const AuthProvider = ({ children }) => {
         // Create profile if signup was successful
         if (data?.user && !error) {
             try {
-                // Check if profile already exists
+                // Check if profile already exists (trigger may have created it with user_id)
                 const { data: existingProfile } = await supabase
                     .from('profiles')
                     .select('id')
-                    .eq('id', data.user.id)
+                    .eq('user_id', data.user.id)
                     .single();
 
-                // Create profile if it doesn't exist
+                // Create profile if trigger didn't create one
                 if (!existingProfile) {
                     await supabase.from('profiles').insert({
-                        id: data.user.id,
+                        user_id: data.user.id,
                         full_name: fullName,
                         email: email,
                     });

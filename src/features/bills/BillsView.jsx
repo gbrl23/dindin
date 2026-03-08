@@ -153,7 +153,7 @@ export default function BillsView() {
 
             // Base Date
             const [baseY, baseM, baseD] = formData.date.split('-').map(Number);
-            const baseAmount = parseFloat(formData.amount.replace('.', '').replace(',', '.'));
+            const baseAmount = parseFloat(formData.amount.replace(/\./g, '').replace(',', '.'));
 
             const batch = [];
 

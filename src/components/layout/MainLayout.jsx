@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import TopHeader from './TopHeader';
 import NotificationsDropdown from './NotificationsDropdown';
-import NewTransactionModal from '../../features/transactions/NewTransactionModal';
+import FloatingCalculator from '../FloatingCalculator';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useDashboard } from '../../contexts/DashboardContext';
 import { Menu, Bell, X, Coins, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -13,7 +13,6 @@ export default function MainLayout({ children }) {
     const location = useLocation();
     const navigate = useNavigate();
     const {
-        isTransactionModalOpen, closeTransactionModal, openTransactionModal, modalType,
         selectedDate, handlePrevMonth, handleNextMonth
     } = useDashboard();
     const { notifications } = useNotifications();
@@ -54,7 +53,14 @@ export default function MainLayout({ children }) {
     }
 
     return (
-        <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex' }}>
+        <div style={{
+            minHeight: '100vh',
+            background: 'var(--bg-secondary)',
+            display: 'flex',
+            padding: isMobile ? '0' : '16px',
+            gap: isMobile ? '0' : '16px',
+            boxSizing: 'border-box'
+        }}>
             <Sidebar
                 collapsed={sidebarCollapsed}
                 setCollapsed={setSidebarCollapsed}
@@ -62,13 +68,20 @@ export default function MainLayout({ children }) {
                 setMobileOpen={setMobileMenuOpen}
             />
 
-            <main style={{
+            <main className="custom-scroll" style={{
                 flex: 1,
-                marginLeft: isMobile ? 0 : (sidebarCollapsed ? '80px' : '260px'),
-                padding: isMobile ? '16px' : '32px 40px',
-                maxWidth: isMobile ? '100%' : `calc(100vw - ${sidebarCollapsed ? '80px' : '260px'})`,
+                position: 'relative',
+                background: 'var(--bg-card)',
+                borderRadius: isMobile ? '0' : '24px',
+                border: isMobile ? 'none' : '1px solid var(--border)',
+                padding: isMobile ? '16px' : '0 40px 32px 40px',
+                maxWidth: isMobile ? '100%' : '100%',
+                height: isMobile ? 'auto' : 'calc(100vh - 32px)',
                 minWidth: 0,
-                transition: 'margin-left 0.3s ease, max-width 0.3s ease, padding 0.3s ease'
+                overflowY: 'auto',
+                overflowX: 'hidden',
+                boxShadow: isMobile ? 'none' : 'var(--shadow-sm)',
+                transition: 'max-width 0.3s ease, padding 0.3s ease'
             }}>
                 <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
                     {/* Mobile Header with Menu Button */}
@@ -240,21 +253,12 @@ export default function MainLayout({ children }) {
                             +
                         </button>
                     )}
-
                     {children}
                 </div>
             </main>
 
-            {/* Global Modals */}
-            {isTransactionModalOpen && (
-                <NewTransactionModal
-                    initialType={modalType}
-                    onClose={closeTransactionModal}
-                    onSuccess={() => {
-                        window.location.reload();
-                    }}
-                />
-            )}
+            {/* Desktop Floating Calculator */}
+            {!isMobile && <FloatingCalculator />}
         </div>
     );
 }

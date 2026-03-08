@@ -13,33 +13,48 @@ import {
     Tv,
     Music,
     Globe,
-    Scissors
+    Scissors,
+    Trash2
 } from 'lucide-react';
 import { useTransactions } from '../../hooks/useTransactions';
-import { useDashboard } from '../../contexts/DashboardContext';
 import DindinTip from '../../components/common/DindinTip';
 
 export default function SubscriptionsView() {
     const navigate = useNavigate();
-    const { transactions } = useTransactions();
-    const { openTransactionModal } = useDashboard();
+    const { transactions, removeTransactionSeries } = useTransactions();
 
     // Filter only recurring transactions (subscriptions)
     const subscriptions = useMemo(() => {
-        // We consider subscription anything that has series_id and is an ongoing expense
-        // OR has 'assinatura' in category/description
-        return transactions.filter(t =>
+        const now = new Date();
+        const startOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+        // Filter transactions that are:
+        // 1. Expenses with a series_id
+        // 2. Not installments (don't have '/' in description)
+        const relevantTransactions = transactions.filter(t =>
             t.type === 'expense' &&
             t.series_id &&
-            !t.description.includes('/') // Not an installment
-        ).reduce((acc, current) => {
-            // Group by series_id to show only one entry per subscription
-            const x = acc.find(item => item.series_id === current.series_id);
-            if (!x) {
-                return acc.concat([current]);
-            } else {
-                return acc;
+            !t.description.includes('/')
+        );
+
+        // Group by series_id
+        return relevantTransactions.reduce((acc, current) => {
+            const seriesId = current.series_id;
+            const existing = acc.find(item => item.series_id === seriesId);
+
+            if (!existing) {
+                // Check if this series has any transaction in current month or future
+                // This prevents old/deleted subscriptions from cluttering the hub
+                const hasFutureOrCurrent = relevantTransactions.some(t =>
+                    t.series_id === seriesId &&
+                    new Date(t.date) >= startOfCurrentMonth
+                );
+
+                if (hasFutureOrCurrent) {
+                    return acc.concat([current]);
+                }
             }
+            return acc;
         }, []);
     }, [transactions]);
 
@@ -132,7 +147,7 @@ export default function SubscriptionsView() {
             {/* Actions */}
             <div style={{ marginBottom: '32px' }}>
                 <button
-                    onClick={() => openTransactionModal('expense')}
+                    onClick={() => navigate('/add-transaction?type=expense')}
                     className="btn btn-primary"
                     style={{
                         padding: '16px 24px',
@@ -174,7 +189,8 @@ export default function SubscriptionsView() {
                             display: 'flex',
                             flexDirection: 'column',
                             gap: '20px',
-                            cursor: 'pointer'
+                            cursor: 'pointer',
+                            position: 'relative'
                         }} onClick={() => navigate(`/edit-transaction/${sub.id}`)}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                 <div style={{
@@ -189,16 +205,37 @@ export default function SubscriptionsView() {
                                 }}>
                                     {getAppIcon(sub.description)}
                                 </div>
-                                <div style={{
-                                    padding: '4px 12px',
-                                    borderRadius: '20px',
-                                    background: 'rgba(52, 199, 89, 0.1)',
-                                    color: 'var(--success)',
-                                    fontSize: '0.7rem',
-                                    fontWeight: '700',
-                                    textTransform: 'uppercase'
-                                }}>
-                                    Ativo
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (window.confirm('Deseja excluir toda esta assinatura (passado e futuro)?')) {
+                                                removeTransactionSeries(sub.id, sub.series_id, 'all');
+                                            }
+                                        }}
+                                        style={{
+                                            padding: '8px',
+                                            borderRadius: '10px',
+                                            background: 'rgba(255, 59, 48, 0.1)',
+                                            color: 'var(--danger)',
+                                            border: 'none',
+                                            cursor: 'pointer'
+                                        }}
+                                        title="Excluir Assinatura"
+                                    >
+                                        <Trash2 size={18} />
+                                    </button>
+                                    <div style={{
+                                        padding: '4px 12px',
+                                        borderRadius: '20px',
+                                        background: 'rgba(52, 199, 89, 0.1)',
+                                        color: 'var(--success)',
+                                        fontSize: '0.7rem',
+                                        fontWeight: '700',
+                                        textTransform: 'uppercase'
+                                    }}>
+                                        Ativo
+                                    </div>
                                 </div>
                             </div>
 

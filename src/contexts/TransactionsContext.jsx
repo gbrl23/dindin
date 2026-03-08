@@ -267,9 +267,9 @@ export const TransactionsProvider = ({ children }) => {
         try {
             let query = supabase.from('transactions').delete();
 
-            if (scope === 'all') {
+            if (scope === 'all' && seriesId) {
                 query = query.eq('series_id', seriesId);
-            } else if (scope === 'future') {
+            } else if (scope === 'future' && seriesId) {
                 const currentTx = transactions.find(t => t.id === id);
                 if (currentTx) {
                     query = query.eq('series_id', seriesId).gte('date', currentTx.date);
@@ -283,6 +283,20 @@ export const TransactionsProvider = ({ children }) => {
 
             const { error } = await query;
             if (error) throw error;
+
+            // Update local state immediately for better UX
+            setTransactions(prev => {
+                if (scope === 'all') {
+                    return prev.filter(t => t.series_id !== seriesId);
+                } else if (scope === 'future') {
+                    const currentTx = prev.find(t => t.id === id);
+                    if (currentTx) {
+                        return prev.filter(t => t.series_id !== seriesId || new Date(t.date) < new Date(currentTx.date));
+                    }
+                }
+                return prev.filter(t => t.id !== id);
+            });
+
             await fetchTransactions(true);
         } catch (err) {
             console.error('Error deleting series:', err);

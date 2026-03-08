@@ -14,7 +14,7 @@ export function validateAmount(value) {
     }
 
     const numericValue = typeof value === 'string'
-        ? parseFloat(value.replace(',', '.'))
+        ? parseFloat(value.replace(/\./g, '').replace(',', '.'))
         : value;
 
     if (isNaN(numericValue)) {
@@ -39,7 +39,7 @@ export function validateNonNegativeAmount(value) {
     }
 
     const numericValue = typeof value === 'string'
-        ? parseFloat(value.replace(',', '.'))
+        ? parseFloat(value.replace(/\./g, '').replace(',', '.'))
         : value;
 
     if (isNaN(numericValue)) {

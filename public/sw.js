@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dindin-v2';
+const CACHE_NAME = 'dindin-v3';
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
@@ -30,10 +30,36 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+    // 1. Skip non-GET requests or requests from other origins (like Supabase)
+    // This allows the browser to handle them directly, avoiding SW interference.
+    if (
+        event.request.method !== 'GET' ||
+        !event.request.url.startsWith(self.location.origin) ||
+        event.request.url.includes('supabase') ||
+        event.request.url.includes('/rest/') ||
+        event.request.url.includes('/auth/') ||
+        event.request.url.includes('/functions/')
+    ) {
+        return;
+    }
+
+    // 2. Handle static asset requests (GET on same origin)
     event.respondWith(
-        fetch(event.request).catch(() => {
-            return caches.match(event.request);
-        })
+        fetch(event.request)
+            .then((response) => {
+                // Return original response
+                return response;
+            })
+            .catch(() => {
+                // Offline fallback: check cache
+                return caches.match(event.request).then((cachedResponse) => {
+                    return cachedResponse || new Response('Offline', {
+                        status: 503,
+                        statusText: 'Service Unavailable',
+                        headers: { 'Content-Type': 'text/plain' }
+                    });
+                });
+            })
     );
 });
 
